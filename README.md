@@ -62,8 +62,9 @@ tasks/
   reasoning-through-empathy/   # EmpathiQ task family: adversarial perspective, hidden
                                #   constraint, reframing, alien axiom
   emotional-moral/             # three-beat EQ items (scenario → perspectives → response)
-rubric/                        # C1–C9 capability categories + the moral-courage dimension
+rubric/                        # C1–C9 capability categories + C10 moral-courage dimension
 architectures/                # architecture-as-submission protocol (on/off ablation harness)
+judge/                         # external-judge scoring protocol (absolute + pairwise, anti-bias)
 runs/                          # scored results (judge-scored = headline; self-scored = preliminary)
 ```
 
