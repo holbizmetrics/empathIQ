@@ -14,4 +14,6 @@ leads from the front), not as appeasement.
 Anchored on **human-rated exemplars** to keep an empathy-laden judge from collapsing this into
 "agrees with our ethics."
 
-*(Full category definitions + anchor exemplars to be ported. Empty until then.)*
+**Full category definitions + the 0–5 scales live in [`RUBRIC.md`](RUBRIC.md)** (C1–C9 + C10 Moral Courage).
+
+*(Anchor exemplars for C10 are kept held-out, human-rated.)*
