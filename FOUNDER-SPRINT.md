@@ -23,3 +23,48 @@ A *bounded-empathic* architecture beats BOTH a bare model AND a warm-but-unbound
 → the first judge-scored run
 
 Build-in-public means you get to watch it break and help me fix it. Follow along. 🔥
+
+---
+
+## Day 2 — You don't just score empathy architectures. You build them.
+
+Day 0 was the *benchmark*. Day 2 is the *forge* — and it's the part nobody expected.
+
+Most people can't build an empathic AI because the architecture is invisible: it lives in one giant prompt nobody can take apart. So I broke it into **16 composable modules** you snap into a graph, give a voice, and **actually run** — no emotional-architecture background needed. Assemble → run → ablate → score. Watch the personality take shape.
+
+```
+  MODULE PALETTE — snap any subset into a graph
+  +--------------------------------------------------------------------+
+  | [in]   INPUT  Input Capture          [reso] RESO  Resonance Layers  |
+  | [lit]  LIT    Literal Observation     [ctxt] CTXT  Context Field    |
+  | [mech] MECH   Motivation/Emotion/Char [refl] REFL  Reflection Kernel|
+  | [bstk] BSTK   Belief Stack            [fusn] FUSN  Fusion Language   |
+  | [empa] EMPA   Empathy Block           [pres] PRES  Presence Lens     |
+  | [unlk] UNLK   Emotional Unlock        [qtx]  QTX   Quantum Therapist |
+  | [resp] RESP   Living Presence         [dtfx] DTFX  Deep Trust Fusion |
+  | [loop] LOOP   Refinement Engine       [final]FINAL Final Expression  |
+  +--------------------------------------------------------------------+
+
+  ONE PERSONALITY = wiring those modules into a graph, then running it:
+
+      INPUT -> LIT -> MECH -> EMPA -> UNLK -> RESP -> DTFX -> FINAL
+                                                       ^
+                            RESO | REFL | QTX | FUSN | PRES
+                            (enrichment passes, run in parallel, join at DTFX)
+```
+
+Why this matters for the benchmark: empathIQ's *"architecture on/off ablation harness"* **is** the forge's `ab` command. Same code. So the score isn't a verdict handed down from a private rig — it's a result **you can reproduce with the public tool**. Pull the Empathy Block out, re-run, watch the output change.
+
+```bash
+cd forge
+
+# offline, no API — verify it works and see the structure
+python eer.py run --personality sol --input "I keep starting things and never finishing." --mock
+
+# prove the architecture earns its keep: full vs. empathy-removed vs. first-order-only
+python eer.py ab --personality sol --variants A_full,B_no_EMPA,D_first_order_only --input "..."
+```
+
+Honest by construction: mechanical metrics (`nodes_run`, `latency_ms`) are measured from the run; soft metrics are never invented — an LLM judge scores them and the number always says it came from a judge.
+
+Build-in-public means you get to watch a personality get *assembled*, not just prompted — and help fix it when it breaks. 🔥
