@@ -10,7 +10,10 @@ Build a personality (blocks + voice), then run and A/B test it for real.
   eer ab   --personality sol --variants A_full,B_no_EMPA,D_first_order_only --input "..."
 
 Default backend is the `claude` CLI. Add --mock for a deterministic offline dry-run
-(structure only, no real text). Add --judge to score soft metrics with an LLM judge
+(structure only, no real text), or --api for the fast direct-API backend (one
+persistent connection instead of a cold CLI launch per block — seconds, not minutes;
+needs `pip install anthropic` + ANTHROPIC_API_KEY). Add --live to watch the pipeline
+light up block by block. Add --judge to score soft metrics with an LLM judge
 (noisy — always labelled as such).
 """
 from __future__ import annotations
@@ -23,6 +26,27 @@ from .backend import make_backend
 from .executor import run_graph
 from .metrics import mechanical, judge, JUDGED
 from .personality import Personality
+
+
+def _live_printer():
+    """A progress callback that draws the pipeline lighting up block by block.
+    ASCII-only structural glyphs so it records cleanly in any terminal."""
+    def cb(node, block, output, latency_ms, ran):
+        name = block.name if block else node
+        sym = block.symbol if block else f"[{node}]"
+        dots = "." * max(3, 32 - len(name))
+        lat = f"{latency_ms/1000:.1f}s" if latency_ms else ""
+        status = "ok" if ran else "--"
+        print(f"  {sym:7} {node:5} {name} {dots} {status} {lat:>6}", flush=True)
+        peek = " ".join((output or "").split())
+        if peek and node != "INPUT":
+            tail = "..." if len(peek) > 60 else ""
+            print(f"            > {peek[:60]}{tail}", flush=True)
+    return cb
+
+
+def _backend_kind(args) -> str:
+    return "mock" if args.mock else ("api" if args.api else "claude")
 
 
 def _variant_overrides(name: str) -> dict:
@@ -77,20 +101,24 @@ def cmd_new(a):
     print(f"created personality '{a.name}' -> {path}")
 
 
-def _run_one(p: Personality, utterance: str, backend, variant: str):
+def _run_one(p: Personality, utterance: str, backend, variant: str, progress=None):
     graph = p.resolve_graph()
     ov = _variant_overrides(variant)
     if ov:
         graph = graph.apply_variant(disable_nodes=ov.get("disable_nodes"),
                                     enable_only=ov.get("enable_only"))
     return run_graph(graph, utterance, backend, persona=p.persona_dict(),
-                     prompt_overrides=p.block_prompts, variant_name=variant)
+                     prompt_overrides=p.block_prompts, variant_name=variant,
+                     progress=progress)
 
 
 def cmd_run(a):
     p = Personality.load(a.personality)
-    backend = make_backend("mock" if a.mock else "claude", model=a.model)
-    res = _run_one(p, a.input, backend, a.variant)
+    backend = make_backend(_backend_kind(a), model=a.model)
+    live = _live_printer() if a.live else None
+    if live:
+        print(f"\n  {p.name}  |  {a.input!r}\n")
+    res = _run_one(p, a.input, backend, a.variant, progress=live)
     print(f"\n=== {p.name} / variant {a.variant} ===\n")
     print(res.final_expression)
     print("\n--- turn log (mechanical only) ---")
@@ -101,7 +129,7 @@ def cmd_run(a):
     print(f"\nmechanical: nodes_run={m['nodes_run']} "
           f"total_latency_ms={m['total_latency_ms']} final_chars={m['final_chars']}")
     if a.judge:
-        jb = make_backend("claude", model=a.model)
+        jb = make_backend("api" if a.api else "claude", model=a.model)
         scored = judge(res, jb)
         _print_table(["Judged metric", "Value", "Source"],
                      [[k, "?" if v.value is None else f"{v.value:.2f}", v.source]
@@ -110,13 +138,16 @@ def cmd_run(a):
 
 def cmd_ab(a):
     p = Personality.load(a.personality)
-    backend = make_backend("mock" if a.mock else "claude", model=a.model)
-    jb = make_backend("claude", model=a.model) if a.judge else None
+    backend = make_backend(_backend_kind(a), model=a.model)
+    jb = make_backend("api" if a.api else "claude", model=a.model) if a.judge else None
     variants = [v.strip() for v in a.variants.split(",") if v.strip()]
     rows = []
     finals = {}
     for v in variants:
-        res = _run_one(p, a.input, backend, v)
+        live = _live_printer() if a.live else None
+        if live:
+            print(f"\n  {p.name}  |  variant {v}\n")
+        res = _run_one(p, a.input, backend, v, progress=live)
         finals[v] = res.final_expression
         m = mechanical(res)
         row = [v, m["nodes_run"], m["total_latency_ms"], m["final_chars"]]
@@ -152,7 +183,12 @@ def build_parser() -> argparse.ArgumentParser:
         s = sub.add_parser(name)
         s.add_argument("--personality", required=True)
         s.add_argument("--input", required=True)
-        s.add_argument("--mock", action="store_true")
+        s.add_argument("--mock", action="store_true",
+                       help="deterministic offline backend (no API)")
+        s.add_argument("--api", action="store_true",
+                       help="fast direct-API backend (needs `pip install anthropic` + ANTHROPIC_API_KEY)")
+        s.add_argument("--live", action="store_true",
+                       help="watch the pipeline light up block by block")
         s.add_argument("--judge", action="store_true")
         s.add_argument("--model", default=None)
         if name == "run":
@@ -164,6 +200,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None):
+    # Windows stdout defaults to cp1252, which crashes on em-dashes / smart quotes in
+    # model output. Decode as UTF-8 so real replies and the live view print cleanly.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
     args = build_parser().parse_args(argv)
     args.func(args)
 

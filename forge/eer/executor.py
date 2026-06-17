@@ -57,19 +57,29 @@ def _build_prompt(block: blockmod.Block, bb: Blackboard, persona: dict | None,
 def run_graph(graph: Graph, utterance: str, backend: Backend,
               persona: dict | None = None,
               prompt_overrides: dict[str, str] | None = None,
-              variant_name: str = "A_full") -> RunResult:
+              variant_name: str = "A_full",
+              progress=None) -> RunResult:
+    """progress, if given, is called as progress(node, block, output, latency_ms, ran)
+    immediately after each node finishes — this is how `--live` watches the pipeline
+    light up block by block. The executor stays UI-agnostic; the caller does the drawing."""
     bb = Blackboard()
     bb.set("$.input.utterance", utterance)
     prompt_overrides = prompt_overrides or {}
     log: list[TurnRow] = []
 
+    def _report(node, block, output, dt, ran):
+        if progress:
+            progress(node, block, output, dt, ran)
+
     for node in graph.topo_order():
         block = blockmod.get(node)
         if block is None:
             log.append(TurnRow(node, False, 0, "", "unknown block, skipped"))
+            _report(node, None, "", 0, False)
             continue
         if node == "INPUT":
             log.append(TurnRow(node, True, 0, _hash(utterance), "input captured"))
+            _report(node, block, utterance, 0, True)
             continue
         system, user = _build_prompt(block, bb, persona, prompt_overrides.get(node))
         t0 = time.monotonic()
@@ -77,6 +87,7 @@ def run_graph(graph: Graph, utterance: str, backend: Backend,
         dt = int((time.monotonic() - t0) * 1000)
         bb.set(block.writes, out)
         log.append(TurnRow(node, True, dt, _hash(out)))
+        _report(node, block, out, dt, True)
 
     final = bb.get("$.output.final_expression") or bb.get("$.output.refined") \
         or bb.get("$.output.resp") or "(no output produced)"

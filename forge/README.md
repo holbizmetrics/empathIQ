@@ -19,9 +19,23 @@ python eer.py run --personality sol --input "I keep starting things and never fi
 # real run (uses the `claude` CLI; no API key setup needed)
 python eer.py run --personality sol --input "I keep starting things and never finishing."
 
+# watch the architecture light up block by block as it runs
+python eer.py run --personality sol --input "..." --live
+
+# fast: direct API instead of a cold CLI launch per block — seconds, not minutes
+#   pip install anthropic && export ANTHROPIC_API_KEY=...   (one-time)
+python eer.py run --personality sol --input "..." --api --live
+
 # A/B the architecture: full vs. empathy-block-removed vs. first-order-only
 python eer.py ab --personality sol --variants A_full,B_no_EMPA,D_first_order_only --input "..."
 ```
+
+### Backends and speed
+
+Each block is one model call. The default `claude`-CLI backend launches a fresh CLI
+process per block, so a 16-block personality takes a few minutes (a cold launch each
+time). The `--api` backend keeps one persistent connection and finishes in ~15–25s —
+use it for anything interactive or for recording. `--mock` runs fully offline.
 
 ## See the architecture
 
@@ -81,9 +95,13 @@ e.g. `B_no_EMPA`), `first_order_only` (INPUT/LIT/RESP/FINAL), `only_<A+B+C>` (is
 
 ## Backends
 
-- `claude` CLI (default) — real runs, no key setup.
+- `claude` CLI (default) — real runs, no key setup. One cold CLI launch per block (slow).
+- `--api` — direct Anthropic API via one persistent connection (fast). Needs
+  `pip install anthropic` and `ANTHROPIC_API_KEY`.
 - `--mock` — deterministic offline stand-in. Proves graph structure and variant logic
   with zero API calls; used by `tests/test_smoke.py`.
+
+Add `--live` to any real run to watch the pipeline execute block by block.
 
 ## Tests
 
