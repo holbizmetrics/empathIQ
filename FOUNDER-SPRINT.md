@@ -30,7 +30,7 @@ Build-in-public means you get to watch it break and help me fix it. Follow along
 
 Day 0 was the *benchmark*. Day 2 is the *forge* — and it's the part nobody expected.
 
-Most people can't build an empathic AI because the architecture is invisible: it lives in one giant prompt nobody can take apart. So I broke it into **16 composable modules** you snap into a graph, give a voice, and **actually run** — no emotional-architecture background needed. Assemble → run → ablate → score. Watch the personality take shape.
+Most people can't build an empathic AI because the architecture is invisible: it lives in one giant prompt nobody can take apart. So I broke it into **16 composable modules** you snap into a graph, give a voice, and **actually run** — no emotional-architecture background needed. Assemble → run → ablate → score. Watch it run — then help me prove the parts earn their keep (that the 16 modules carve empathy at real joints is a judged pass I haven't run yet; right now the forge proves the plumbing works and no block is dead weight on the output path).
 
 ```
   MODULE PALETTE — snap any subset into a graph
