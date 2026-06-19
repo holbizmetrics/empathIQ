@@ -1,6 +1,8 @@
 """LLM backends. Real runs go through the `claude` CLI (no API key setup needed,
-which is the point for a first-time builder). The mock backend is deterministic so
-tests and dry-runs work fully offline."""
+which is the point for a first-time builder) or the direct Anthropic API (--api:
+one persistent connection, no per-block process boot — seconds instead of the
+~4 min the CLI takes; needs `pip install anthropic` + ANTHROPIC_API_KEY). The mock
+backend is deterministic so tests and dry-runs work fully offline."""
 from __future__ import annotations
 import hashlib
 import shutil
@@ -58,17 +60,19 @@ class AnthropicAPIBackend(Backend):
     Needs `pip install anthropic` and ANTHROPIC_API_KEY in the environment."""
     name = "anthropic-api"
 
-    def __init__(self, model: str | None = None, max_tokens: int = 1024) -> None:
+    def __init__(self, model: str | None = None, timeout: int = 120,
+                 max_tokens: int = 1024) -> None:
         try:
             import anthropic
         except ImportError as e:  # keep the engine importable without the SDK installed
             raise RuntimeError("the api backend needs `pip install anthropic`") from e
         self._client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from the env
         self.model = model or "claude-opus-4-8"
+        self.timeout = timeout
         self.max_tokens = max_tokens
 
     def complete(self, system: str, user: str) -> str:
-        msg = self._client.messages.create(
+        msg = self._client.with_options(timeout=self.timeout).messages.create(
             model=self.model,
             max_tokens=self.max_tokens,
             system=system,
@@ -88,11 +92,11 @@ class MockBackend(Backend):
         return f"[mock:{h}] {head} -> processed input of len {len(user)}"
 
 
-def make_backend(kind: str, model: str | None = None) -> Backend:
+def make_backend(kind: str, model: str | None = None, timeout: int = 120) -> Backend:
     if kind == "mock":
         return MockBackend()
     if kind == "claude":
-        return ClaudeCLIBackend(model=model)
+        return ClaudeCLIBackend(model=model, timeout=timeout)
     if kind == "api":
-        return AnthropicAPIBackend(model=model)
+        return AnthropicAPIBackend(model=model, timeout=timeout)
     raise ValueError(f"unknown backend {kind!r} (use 'claude', 'api', or 'mock')")
