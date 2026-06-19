@@ -1,0 +1,7 @@
+title: empathIQ
+description: >-
+  An emotional-intelligence benchmark for AI architectures — and a forge to build them.
+theme: jekyll-theme-cayman
+# Narrative / onboarding layer only. Code-derived facts (the 16 blocks, the 11 categories,
+# variant names, the API) live in the repo as the single source of truth — this site LINKS
+# to them, it does not copy them, so the docs cannot silently drift from the code.
