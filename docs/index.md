@@ -17,6 +17,10 @@ The thing a person actually talks to is rarely a bare model. It's a **system**: 
 
 empathIQ's unit of evaluation is the **architecture**, scored on its **outputs** (so it stays model-agnostic — submit anything that produces responses). The headline move is an **ablation**: same base model, architecture on vs. off, measured.
 
+![EER — the 16-block empathy architecture](architecture.svg)
+
+*The architecture is the unit: 16 composable blocks wired in a graph. This diagram is generated from the engine's own `graphs/default.json`, so it can't drift from what actually runs.*
+
 ## The two ideas that make it different
 
 1. **Architecture as the unit.** Most empathic AI lives in one giant invisible prompt nobody can take apart. empathIQ assumes the interesting behavior comes from *structure*, and measures structure directly.

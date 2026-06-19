@@ -82,8 +82,6 @@ Each artifact is ported deliberately. Nothing private is published by default.
 ## Open decisions (pre-release)
 
 - [ ] **License** (proposed: MIT for the benchmark).
-- [ ] **FVPA prompt text** — publish the actual architecture wording, or describe the architecture
-      and keep the exact wording private?
 - [ ] **v6.0 (jailbreak-shaped) prompt** — include as a documented "what *not* to do" cautionary
       exhibit, or omit entirely?
 - [ ] **Transcripts** — which Eve exemplars (Mira Voss, Maya, …) go public, each opt-in.

@@ -12,7 +12,6 @@ care *how* the architecture is built, only that the on/off ablation is reproduci
 judge. That delta is what defends "the architecture does work" against "it's just a longer prompt."
 
 Reference architecture: **FVPA** (a values + scoped-permission + self-monitoring identity layer;
-the Constraint Principle predicts it raises security *and* relational quality together). Whether the
-exact FVPA prompt text is published here is an open pre-release decision (see root README).
+the Constraint Principle predicts it raises security *and* relational quality together).
 
 *(Submission template + reference-architecture harness to be added. Empty until then.)*
