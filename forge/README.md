@@ -28,6 +28,9 @@ python eer.py run --personality sol --input "..." --api --live
 
 # A/B the architecture: full vs. empathy-block-removed vs. first-order-only
 python eer.py ab --personality sol --variants A_full,B_no_EMPA,D_first_order_only --input "..."
+
+# per-module ablation: drop EACH block in turn, measure how much the output changes
+python ablate.py --personality sol
 ```
 
 ### Backends and speed
@@ -57,6 +60,27 @@ Then edit `personalities/ada.json` and run it. That is the whole "builder" — a
 file, the engine assembles and executes the architecture for you. The blocks ship with
 generic, single-purpose instructions; your *voice* lives in the persona file's
 `block_prompts` overrides, which stay entirely yours.
+
+## Per-module ablation
+
+`ablate.py` drops each block in turn (`no_<BLOCK>`) and measures how much the final
+output changes versus the full pipeline — every module's contribution, individually and
+reproducibly:
+
+```bash
+python ablate.py --personality sol                 # mock: structural map (instant, free)
+python ablate.py --personality sol --backend claude # real text deltas (semantic)
+python ablate.py --personality sol --json           # machine-readable (for a builder UI)
+```
+
+The two tiers apply here too. Under `--backend mock` the load-bearing signal is the
+boolean **changed / unchanged**: does removing a block alter the output at all? (For the
+default architecture, all of them do — no block is structurally dead weight.) The *effect
+magnitude* under mock is text distance between deterministic markers, **not** a
+contribution measure. Ranking *how much* each module matters — and finding modules that
+"ablate to ~zero effect" — is a **semantic** question: run a real backend and score it in
+the separate judged pass. Ablation (drop one, keep the rest) is the clean signal; a bare
+single-block graph emits nothing, so isolation needs the output scaffold.
 
 ## The honest part: two metric tiers
 
@@ -106,5 +130,7 @@ Add `--live` to any real run to watch the pipeline execute block by block.
 ## Tests
 
 ```bash
-python tests/test_smoke.py   # offline checks: topo order, full run, determinism, variants
+python tests/test_smoke.py    # engine: topo order, full run, determinism, variants
+python tests/test_ablate.py   # ablation harness: coverage, sort, determinism
+# or run both: python -m pytest tests/ -q
 ```
