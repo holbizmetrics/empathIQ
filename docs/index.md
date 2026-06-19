@@ -9,17 +9,19 @@ title: empathIQ — start here
 
 > Built in public, day by day. This is the front door; the working parts live in the [code repository](https://github.com/holbizmetrics/empathIQ).
 
+**Three ways in:** if you're *curious*, read on. If you want to *build and run* an architecture, jump to [the Forge](https://github.com/holbizmetrics/empathIQ/tree/master/forge). If you want to *evaluate or contribute*, see [what it measures](https://github.com/holbizmetrics/empathIQ/tree/master/benchmark).
+
 ---
 
 ## What it is, in one minute
 
 The thing a person actually talks to is rarely a bare model. It's a **system**: a model *plus* a persona, a perspective-taking pass, boundaries, memory. That system can behave very differently from the model underneath it — but no standard EQ benchmark has a slot for "this-model-with-this-architecture."
 
-empathIQ's unit of evaluation is the **architecture**, scored on its **outputs** (so it stays model-agnostic — submit anything that produces responses). The headline move is an **ablation**: same base model, architecture on vs. off, measured.
+empathIQ's unit of evaluation is the **architecture**, scored on its **outputs** (so it stays model-agnostic — submit anything that produces responses). The headline move is an **ablation** — run the same base model with the architecture on, then off, and measure the difference.
 
 ![EER — the 16-block empathy architecture](architecture.svg)
 
-*The architecture is the unit: 16 composable blocks wired in a graph. This diagram is generated from the engine's own `graphs/default.json`, so it can't drift from what actually runs.*
+*The architecture is the unit: 16 composable blocks wired in a graph. This diagram is generated from the engine's own `graphs/default.json` (regenerate with `docs/make_diagrams.py`), so it shows the real wiring, not a hand-drawn idealization.*
 
 ## The two ideas that make it different
 
