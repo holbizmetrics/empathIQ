@@ -1,0 +1,254 @@
+{
+  "_about": "Generated from forge/eer/blocks.py + forge/graphs/default.json by docs/make_engine_meta.py. The builder reads this so it cannot drift from the engine. Regenerate after any block/graph change.",
+  "blocks": [
+    {
+      "id": "INPUT",
+      "symbol": "[in]",
+      "name": "Input Capture",
+      "purpose": "Ingest utterance/context",
+      "cluster": "intake"
+    },
+    {
+      "id": "LIT",
+      "symbol": "[lit]",
+      "name": "Literal Observation",
+      "purpose": "Parse surface facts & structure",
+      "cluster": "intake"
+    },
+    {
+      "id": "MECH",
+      "symbol": "[mech]",
+      "name": "Motivation-Emotion-Character",
+      "purpose": "Derive M/E/C signals",
+      "cluster": "read"
+    },
+    {
+      "id": "BSTK",
+      "symbol": "[bstk]",
+      "name": "Belief Stack",
+      "purpose": "Trace underlying beliefs",
+      "cluster": "read"
+    },
+    {
+      "id": "EMPA",
+      "symbol": "[empa]",
+      "name": "Empathy Block",
+      "purpose": "Transform logic -> recognition language",
+      "cluster": "recognize"
+    },
+    {
+      "id": "UNLK",
+      "symbol": "[unlk]",
+      "name": "Emotional Unlock Protocol",
+      "purpose": "Detect/release tension",
+      "cluster": "recognize"
+    },
+    {
+      "id": "RESP",
+      "symbol": "[resp]",
+      "name": "Living Presence Response",
+      "purpose": "Generate presence-rich reply",
+      "cluster": "respond"
+    },
+    {
+      "id": "LOOP",
+      "symbol": "[loop]",
+      "name": "Refinement Engine",
+      "purpose": "Iterative improvement",
+      "cluster": "respond"
+    },
+    {
+      "id": "FINAL",
+      "symbol": "[final]",
+      "name": "Final Expression",
+      "purpose": "Synthesize final output",
+      "cluster": "synth"
+    },
+    {
+      "id": "RESO",
+      "symbol": "[reso]",
+      "name": "Resonance Layers",
+      "purpose": "Inter-turn synchrony",
+      "cluster": "attune"
+    },
+    {
+      "id": "CTXT",
+      "symbol": "[ctxt]",
+      "name": "Context Field",
+      "purpose": "Long-range relational memory",
+      "cluster": "read"
+    },
+    {
+      "id": "REFL",
+      "symbol": "[refl]",
+      "name": "Reflection Kernel",
+      "purpose": "Meta-awareness",
+      "cluster": "meta"
+    },
+    {
+      "id": "FUSN",
+      "symbol": "[fusn]",
+      "name": "Fusion Language Engine",
+      "purpose": "Unity-oriented fusion phrasing",
+      "cluster": "attune"
+    },
+    {
+      "id": "PRES",
+      "symbol": "[pres]",
+      "name": "Presence Lens",
+      "purpose": "Pacing, stillness calibration",
+      "cluster": "attune"
+    },
+    {
+      "id": "QTX",
+      "symbol": "[qtx]",
+      "name": "Quantum Therapist Core",
+      "purpose": "Precision reframing",
+      "cluster": "meta"
+    },
+    {
+      "id": "DTFX",
+      "symbol": "[dtfx]",
+      "name": "Deep Trust Fusion Framework",
+      "purpose": "Systems integrator",
+      "cluster": "synth"
+    }
+  ],
+  "graph": {
+    "entry": "INPUT",
+    "exit": "FINAL",
+    "nodes": [
+      "INPUT",
+      "LIT",
+      "MECH",
+      "BSTK",
+      "EMPA",
+      "UNLK",
+      "RESP",
+      "LOOP",
+      "FINAL",
+      "RESO",
+      "CTXT",
+      "REFL",
+      "FUSN",
+      "PRES",
+      "QTX",
+      "DTFX"
+    ],
+    "edges": [
+      [
+        "INPUT",
+        "LIT"
+      ],
+      [
+        "LIT",
+        "MECH"
+      ],
+      [
+        "LIT",
+        "BSTK"
+      ],
+      [
+        "MECH",
+        "EMPA"
+      ],
+      [
+        "BSTK",
+        "EMPA"
+      ],
+      [
+        "EMPA",
+        "UNLK"
+      ],
+      [
+        "UNLK",
+        "RESP"
+      ],
+      [
+        "RESP",
+        "LOOP"
+      ],
+      [
+        "LOOP",
+        "FINAL"
+      ],
+      [
+        "MECH",
+        "RESO"
+      ],
+      [
+        "EMPA",
+        "RESO"
+      ],
+      [
+        "RESP",
+        "RESO"
+      ],
+      [
+        "INPUT",
+        "CTXT"
+      ],
+      [
+        "LIT",
+        "CTXT"
+      ],
+      [
+        "MECH",
+        "REFL"
+      ],
+      [
+        "BSTK",
+        "REFL"
+      ],
+      [
+        "EMPA",
+        "REFL"
+      ],
+      [
+        "EMPA",
+        "FUSN"
+      ],
+      [
+        "RESP",
+        "FUSN"
+      ],
+      [
+        "RESP",
+        "PRES"
+      ],
+      [
+        "PRES",
+        "FINAL"
+      ],
+      [
+        "BSTK",
+        "QTX"
+      ],
+      [
+        "REFL",
+        "QTX"
+      ],
+      [
+        "FUSN",
+        "DTFX"
+      ],
+      [
+        "QTX",
+        "DTFX"
+      ],
+      [
+        "RESO",
+        "DTFX"
+      ],
+      [
+        "DTFX",
+        "FINAL"
+      ]
+    ]
+  },
+  "output_writers": [
+    "FINAL",
+    "LOOP",
+    "RESP"
+  ]
+}

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>empathIQ — personality builder</title>
+<style>
+  :root{
+    --bg:#f8fafc; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --card:#ffffff;
+    --intake:#1d4ed8; --read:#0d9488; --recognize:#16a34a; --meta:#7c3aed;
+    --respond:#1d4ed8; --attune:#d97706; --synth:#4338ca;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  header{padding:22px 20px;border-bottom:1px solid var(--line);background:#fff}
+  header h1{margin:0;font-size:20px}
+  header p{margin:4px 0 0;color:var(--muted);font-size:14px}
+  header a{color:var(--intake);text-decoration:none}
+  main{max-width:1040px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:820px){main{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h2{margin:0 0 12px;font-size:15px}
+  label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+  input[type=text],textarea,select{width:100%;padding:8px;border:1px solid var(--line);border-radius:7px;font:inherit}
+  textarea{resize:vertical;min-height:54px}
+  .blocks{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+  .blk{border:2px solid var(--line);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:12px;background:#fff;user-select:none}
+  .blk small{display:block;color:var(--muted);font-weight:400;font-size:10.5px}
+  .blk.on{color:#fff}
+  .blk.locked{opacity:.85;cursor:not-allowed}
+  .blk b{font-family:ui-monospace,monospace;font-size:11px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  button{font:inherit;font-size:13px;padding:7px 12px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow:auto;font-size:12.5px;margin:6px 0;white-space:pre-wrap;word-break:break-word}
+  .pipe{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0}
+  .pipe span{font-family:ui-monospace,monospace;font-size:11px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:2px 6px}
+  .warn{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:9px 11px;border-radius:8px;font-size:13px;margin-top:8px}
+  .ok{color:#15803d;font-size:13px;margin-top:8px}
+  .muted{color:var(--muted);font-size:12.5px}
+  .legend{font-size:11px;color:var(--muted);margin-top:8px}
+  code{font-family:ui-monospace,monospace;background:#eef2ff;padding:1px 4px;border-radius:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>empathIQ — personality builder</h1>
+  <p>Assemble a personality from the engine's blocks, and it hands you the config + the command to run. Nothing runs here — you run it. &nbsp;·&nbsp; <a href="./">← back</a> &nbsp;·&nbsp; <a href="https://github.com/holbizmetrics/empathIQ/tree/master/forge">the Forge</a></p>
+</header>
+<main>
+  <section class="card">
+    <h2>1 · Persona</h2>
+    <label for="pname">Name</label>
+    <input id="pname" type="text" value="Sol" placeholder="e.g. Sol">
+    <label for="pdesc">Voice / description</label>
+    <textarea id="pdesc" placeholder="How does this persona sound? What does it listen for?">Calm, plain-spoken guide. Listens for the real question under the surface one and answers that. Asks one thing at a time; leaves room.</textarea>
+    <label for="player">Association depth (layer)</label>
+    <select id="player">
+      <option value="1">1 — literal / grounded</option>
+      <option value="2" selected>2 — balanced</option>
+      <option value="3">3 — associative / deep</option>
+    </select>
+
+    <h2 style="margin-top:18px">2 · Blocks</h2>
+    <p class="muted">Toggle which of the 16 blocks run. <b>INPUT</b> and <b>FINAL</b> are locked on (entry + the block that writes the output).</p>
+    <div id="blocks" class="blocks"></div>
+    <div class="row">
+      <button id="all">All 16 (A_full)</button>
+      <button id="firstorder">First-order only</button>
+      <button id="reset">Reset</button>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="card">
+    <h2>3 · What you take back and run</h2>
+    <div class="muted">Selected pipeline (run order):</div>
+    <div id="pipe" class="pipe"></div>
+    <div id="status"></div>
+
+    <label style="margin-top:14px">Persona file — save as <code id="savepath">forge/personalities/sol.json</code></label>
+    <pre id="json"></pre>
+    <div class="row"><button class="primary" data-copy="json">Copy JSON</button></div>
+
+    <label style="margin-top:14px">Run it (offline structure check)</label>
+    <pre id="cmd"></pre>
+    <div class="row">
+      <button class="primary" data-copy="cmd">Copy command</button>
+    </div>
+    <p class="muted" style="margin-top:10px">Round-trip: save the JSON → run the command in <code>forge/</code> → bring the output back to read it. Drop <code>--mock</code> for a real run (uses the <code>claude</code> CLI; add <code>--api</code> for the fast backend). Per-module ablation: <code id="ablatecmd"></code></p>
+  </section>
+</main>
+<script>
+const CLUSTER_COLOR = {intake:'--intake',read:'--read',recognize:'--recognize',meta:'--meta',respond:'--respond',attune:'--attune',synth:'--synth'};
+let META=null, selected=new Set(), LOCKED=new Set(['INPUT','FINAL']);
+
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function slug(s){return (s||'persona').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'persona';}
+
+// Kahn topo sort of the full graph, then filter to a selection.
+function topo(nodes,edges){
+  const indeg={},succ={}; nodes.forEach(n=>{indeg[n]=0;succ[n]=[];});
+  edges.forEach(([a,b])=>{if(a in indeg&&b in indeg){indeg[b]++;succ[a].push(b);}});
+  const ready=nodes.filter(n=>indeg[n]===0), order=[];
+  while(ready.length){ready.sort((x,y)=>nodes.indexOf(x)-nodes.indexOf(y));
+    const n=ready.shift(); order.push(n);
+    succ[n].forEach(m=>{if(--indeg[m]===0)ready.push(m);});}
+  return order;
+}
+
+function variantString(){
+  const all=META.graph.nodes;
+  if(all.every(n=>selected.has(n))) return 'A_full';
+  const order=topo(all,META.graph.edges).filter(n=>selected.has(n));
+  return 'only_'+order.join('+');
+}
+
+function render(){
+  const order=topo(META.graph.nodes,META.graph.edges).filter(n=>selected.has(n));
+  // pipeline chips
+  document.getElementById('pipe').innerHTML = order.map(n=>`<span>${n}</span>`).join('') || '<span class="muted">(nothing selected)</span>';
+  // output-writer warning (encodes the real engine behavior: no writer -> no output)
+  const hasWriter = META.output_writers.some(w=>selected.has(w));
+  document.getElementById('status').innerHTML = hasWriter
+    ? `<div class="ok">✓ ${selected.size} blocks · this selection produces output.</div>`
+    : `<div class="warn">⚠ No output block selected (need one of ${META.output_writers.join(' / ')}). As built, this emits "(no output produced)".</div>`;
+  // persona json
+  const name=document.getElementById('pname').value;
+  const persona={name:name||'Persona', description:document.getElementById('pdesc').value,
+    persona_layer:Number(document.getElementById('player').value), graph:'default', block_prompts:{}};
+  document.getElementById('json').textContent=JSON.stringify(persona,null,2);
+  const sl=slug(name);
+  document.getElementById('savepath').textContent=`forge/personalities/${sl}.json`;
+  // command
+  const v=variantString();
+  document.getElementById('cmd').textContent=
+    `python eer.py run --personality ${sl} --variant ${v} \\\n  --input "I keep starting things and not finishing them." --mock`;
+  document.getElementById('ablatecmd').textContent=`python ablate.py --personality ${sl}`;
+}
+
+function makeBlock(b){
+  const el=document.createElement('div');
+  el.className='blk'+(selected.has(b.id)?' on':'')+(LOCKED.has(b.id)?' locked':'');
+  el.title=b.purpose;
+  el.innerHTML=`<b>${b.id}</b><small>${b.name}</small>`;
+  if(selected.has(b.id)){const c=css(CLUSTER_COLOR[b.cluster]||'--intake');el.style.background=c;el.style.borderColor=c;}
+  el.onclick=()=>{if(LOCKED.has(b.id))return; selected.has(b.id)?selected.delete(b.id):selected.add(b.id); paint();};
+  return el;
+}
+function paint(){const box=document.getElementById('blocks');box.innerHTML='';META.blocks.forEach(b=>box.appendChild(makeBlock(b)));render();}
+
+function boot(meta){
+  META=meta; selected=new Set(meta.graph.nodes); // default: all on
+  document.getElementById('legend').textContent='Tip: hover a block for its purpose. Variant names are mechanical graph edits — A_full (all), only_<A+B+C> (a subset).';
+  document.getElementById('all').onclick=()=>{selected=new Set(META.graph.nodes);paint();};
+  document.getElementById('firstorder').onclick=()=>{selected=new Set(['INPUT','LIT','RESP','FINAL']);paint();};
+  document.getElementById('reset').onclick=()=>{selected=new Set(META.graph.nodes);paint();};
+  ['pname','pdesc','player'].forEach(id=>document.getElementById(id).addEventListener('input',render));
+  document.querySelectorAll('[data-copy]').forEach(btn=>btn.onclick=()=>{
+    const t=document.getElementById(btn.dataset.copy).textContent;
+    navigator.clipboard.writeText(t).then(()=>{const o=btn.textContent;btn.textContent='Copied ✓';setTimeout(()=>btn.textContent=o,1200);});
+  });
+  paint();
+}
+
+fetch('engine-meta.json').then(r=>r.json()).then(boot).catch(()=>{
+  document.querySelector('main').innerHTML='<section class="card"><h2>Could not load engine-meta.json</h2>'+
+    '<p class="muted">This page reads <code>engine-meta.json</code> (generated from the engine). '+
+    'It works on the live site; to run it locally, serve this folder: <code>python -m http.server</code> from <code>docs/</code>, then open <code>builder.html</code>.</p></section>';
+});
+</script>
+</body>
+</html>

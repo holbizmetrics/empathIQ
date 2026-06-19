@@ -9,7 +9,7 @@ title: empathIQ — start here
 
 > Built in public, day by day. This is the front door; the working parts live in the [code repository](https://github.com/holbizmetrics/empathIQ).
 
-**Three ways in:** if you're *curious*, read on. If you want to *build and run* an architecture, jump to [the Forge](https://github.com/holbizmetrics/empathIQ/tree/master/forge). If you want to *evaluate or contribute*, see [what it measures](https://github.com/holbizmetrics/empathIQ/tree/master/benchmark).
+**Three ways in:** if you're *curious*, read on. If you want to *build one*, try the [personality builder](builder.html) (in-browser, no setup) or [the Forge](https://github.com/holbizmetrics/empathIQ/tree/master/forge). If you want to *evaluate or contribute*, see [what it measures](https://github.com/holbizmetrics/empathIQ/tree/master/benchmark).
 
 ---
 
@@ -46,4 +46,6 @@ empathIQ is **pre-release** and built in the open. Two commitments worth stating
 
 ---
 
-*Coming to this page next: an in-browser **builder** — assemble a personality from the blocks, and it hands you back the config and the command to run.*
+## Build one in your browser
+
+**[→ Open the personality builder](builder.html)** — assemble a personality from the 16 blocks (toggle which run), and it hands you back the persona file and the exact command to run. Nothing executes in the browser; you run it. It reads the block list straight from the engine, so it can't drift from what actually runs.
