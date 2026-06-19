@@ -58,6 +58,8 @@ unaided preference.
 ## Layout
 
 ```
+benchmark/                     # the 11 empathy-interaction categories (bottom-up from real
+                               #   examples) + prompts.json eliciting prompts; grading deferred
 tasks/
   reasoning-through-empathy/   # EmpathiQ task family: adversarial perspective, hidden
                                #   constraint, reframing, alien axiom
