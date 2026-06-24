@@ -83,7 +83,16 @@ def run_graph(graph: Graph, utterance: str, backend: Backend,
             continue
         system, user = _build_prompt(block, bb, persona, prompt_overrides.get(node))
         t0 = time.monotonic()
-        out = backend.complete(system, user)
+        try:
+            out = backend.complete(system, user)
+        except Exception as e:
+            # One slow/failed block must not crash the whole run — record it,
+            # report it, and let downstream blocks proceed without its output.
+            dt = int((time.monotonic() - t0) * 1000)
+            note = f"{type(e).__name__}: {str(e)[:120]}"
+            log.append(TurnRow(node, False, dt, "", note))
+            _report(node, block, f"[block failed: {note}]", dt, False)
+            continue
         dt = int((time.monotonic() - t0) * 1000)
         bb.set(block.writes, out)
         log.append(TurnRow(node, True, dt, _hash(out)))

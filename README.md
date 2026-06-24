@@ -6,6 +6,29 @@
 
 ---
 
+## Try it now
+
+You need Python 3 and the [`claude` CLI](https://docs.claude.com/en/docs/claude-code) — **no API key, no setup.** From this folder:
+
+```bash
+# instant offline check — proves it runs (fake text, ~2 sec)
+python empathiq.py run --personality sol --input "I keep starting things and not finishing" --mock --live
+
+# the real thing — real model output through your claude CLI, no API key (~4 min)
+python empathiq.py run --personality sol --input "I keep starting things and not finishing" --live
+
+# the actual experiment — same input through the full architecture vs. ablated versions (~10 min)
+python empathiq.py ab --personality sol --input "I keep starting things and not finishing" --variants A_full,B_no_EMPA,D_first_order_only --live
+```
+
+No `cd`, no hunting for the engine. `--live` shows the 16 blocks light up one at a time; the
+real run is slow because each block is its own model call (add `--api` for a fast direct-API
+run — that one needs a key). Swap the `--input "..."` for any situation, or use a designed
+prompt from [`benchmark/prompts.json`](benchmark/prompts.json). **Full command reference and how
+to build your own personality: [`forge/README.md`](forge/README.md).**
+
+---
+
 ## Why this exists
 
 Existing EQ benchmarks (e.g. EQ-Bench3) score an **endpoint** — `gpt-5`, `claude-opus`. But the

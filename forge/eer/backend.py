@@ -31,7 +31,7 @@ class Backend:
 class ClaudeCLIBackend(Backend):
     name = "claude-cli"
 
-    def __init__(self, model: str | None = None, timeout: int = 120) -> None:
+    def __init__(self, model: str | None = None, timeout: int = 300) -> None:
         if not shutil.which("claude"):
             raise RuntimeError("`claude` CLI not found on PATH; use --mock instead")
         self.model = model
@@ -92,7 +92,7 @@ class MockBackend(Backend):
         return f"[mock:{h}] {head} -> processed input of len {len(user)}"
 
 
-def make_backend(kind: str, model: str | None = None, timeout: int = 120) -> Backend:
+def make_backend(kind: str, model: str | None = None, timeout: int = 300) -> Backend:
     if kind == "mock":
         return MockBackend()
     if kind == "claude":

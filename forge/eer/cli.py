@@ -18,6 +18,7 @@ light up block by block. Add --judge to score soft metrics with an LLM judge
 """
 from __future__ import annotations
 import argparse
+import os
 import sys
 
 from . import blocks as blockmod
@@ -28,9 +29,38 @@ from .metrics import mechanical, judge, JUDGED
 from .personality import Personality
 
 
-def _live_printer():
+def _quickstart_text(prog: str) -> str:
+    """Friendly, copy-pasteable getting-started shown when no command is given.
+    The user runs the script before reading any README — so the script teaches."""
+    return f"""\
+empathIQ — build an empathy architecture and test it for real.
+
+No command given, so here's how to start. You need Python 3 and the `claude`
+CLI — no API key, no setup:
+
+  1. instant offline check — proves it runs (fake text, ~2 sec)
+     python {prog} run --personality sol --input "I keep starting things and not finishing" --mock --live
+
+  2. the real thing — real model output via your claude CLI (~4 min)
+     python {prog} run --personality sol --input "I keep starting things and not finishing" --live
+
+  3. the experiment — full architecture vs. ablated, same input (~10 min)
+     python {prog} ab --personality sol --input "I keep starting things and not finishing" --variants A_full,B_no_EMPA,D_first_order_only --live
+
+More:
+  python {prog} blocks     list the 16 empathy blocks
+  python {prog} graphs     list available graphs
+  python {prog} new -h     scaffold your own personality
+  python {prog} -h         full argument help
+
+Swap the --input "..." for any situation. Full guide: forge/README.md
+"""
+
+
+def _live_printer(full: bool = False):
     """A progress callback that draws the pipeline lighting up block by block.
-    ASCII-only structural glyphs so it records cleanly in any terminal."""
+    ASCII-only structural glyphs so it records cleanly in any terminal.
+    full=True prints each block's COMPLETE output instead of the 60-char preview."""
     def cb(node, block, output, latency_ms, ran):
         name = block.name if block else node
         sym = block.symbol if block else f"[{node}]"
@@ -38,10 +68,18 @@ def _live_printer():
         lat = f"{latency_ms/1000:.1f}s" if latency_ms else ""
         status = "ok" if ran else "--"
         print(f"  {sym:7} {node:5} {name} {dots} {status} {lat:>6}", flush=True)
-        peek = " ".join((output or "").split())
-        if peek and node != "INPUT":
-            tail = "..." if len(peek) > 60 else ""
-            print(f"            > {peek[:60]}{tail}", flush=True)
+        if node == "INPUT":
+            return
+        text = output or ""
+        if full:
+            for line in (text.splitlines() or [""]):
+                print(f"            | {line}", flush=True)
+            print(flush=True)
+        else:
+            peek = " ".join(text.split())
+            if peek:
+                tail = "..." if len(peek) > 60 else ""
+                print(f"            > {peek[:60]}{tail}", flush=True)
     return cb
 
 
@@ -112,10 +150,38 @@ def _run_one(p: Personality, utterance: str, backend, variant: str, progress=Non
                      progress=progress)
 
 
+def _active_node_count(p, variant: str) -> int:
+    """How many blocks will actually call the backend for this variant (INPUT is free)."""
+    graph = p.resolve_graph()
+    ov = _variant_overrides(variant)
+    if ov:
+        graph = graph.apply_variant(disable_nodes=ov.get("disable_nodes"),
+                                    enable_only=ov.get("enable_only"))
+    return sum(1 for n in graph.topo_order() if n != "INPUT")
+
+
+def _print_run_intro(p, kind: str, n_calls: int) -> None:
+    """Tell a first-time user what is about to happen and why it takes time.
+    n_calls = blocks that hit the backend; +1 for the free INPUT block = total blocks."""
+    n_blocks = n_calls + 1  # INPUT is always present and just ingests text (no model call)
+    if kind == "mock":
+        print(f"\nempathIQ - DRY RUN (--mock): pushing your message through {p.name}'s "
+              f"{n_blocks}-block architecture with placeholder text, just to show the structure. "
+              f"Instant, no model calls - drop --mock for a real reply.\n")
+        return
+    fast = " (--api is much faster; --mock is instant)" if kind == "claude" else ""
+    print(f"\nempathIQ - running your message through {p.name}, a {n_blocks}-block empathy architecture.")
+    print("Each block is one AI pass - observe, read motivation, empathize, respond, refine, "
+          "then synthesize - run in order.")
+    print(f"That's {n_calls} separate model calls (one per block; INPUT just reads your text), so a "
+          f"real run takes a few minutes{fast}. The final reply prints at the bottom.\n")
+
+
 def cmd_run(a):
     p = Personality.load(a.personality)
-    backend = make_backend(_backend_kind(a), model=a.model)
-    live = _live_printer() if a.live else None
+    backend = make_backend(_backend_kind(a), model=a.model, timeout=a.timeout)
+    _print_run_intro(p, _backend_kind(a), _active_node_count(p, a.variant))
+    live = _live_printer(full=a.full) if (a.live or a.full) else None
     if live:
         print(f"\n  {p.name}  |  {a.input!r}\n")
     res = _run_one(p, a.input, backend, a.variant, progress=live)
@@ -129,7 +195,7 @@ def cmd_run(a):
     print(f"\nmechanical: nodes_run={m['nodes_run']} "
           f"total_latency_ms={m['total_latency_ms']} final_chars={m['final_chars']}")
     if a.judge:
-        jb = make_backend("api" if a.api else "claude", model=a.model)
+        jb = make_backend("api" if a.api else "claude", model=a.model, timeout=a.timeout)
         scored = judge(res, jb)
         _print_table(["Judged metric", "Value", "Source"],
                      [[k, "?" if v.value is None else f"{v.value:.2f}", v.source]
@@ -138,13 +204,24 @@ def cmd_run(a):
 
 def cmd_ab(a):
     p = Personality.load(a.personality)
-    backend = make_backend(_backend_kind(a), model=a.model)
-    jb = make_backend("api" if a.api else "claude", model=a.model) if a.judge else None
+    backend = make_backend(_backend_kind(a), model=a.model, timeout=a.timeout)
+    jb = make_backend("api" if a.api else "claude", model=a.model, timeout=a.timeout) if a.judge else None
     variants = [v.strip() for v in a.variants.split(",") if v.strip()]
+    kind = _backend_kind(a)
+    if kind == "mock":
+        print(f"\nempathIQ - DRY RUN (--mock): comparing {len(variants)} versions of {p.name} "
+              "on the same message (structure only, instant).\n")
+    else:
+        total = sum(_active_node_count(p, v) for v in variants)
+        fast = " (--api is much faster)" if kind == "claude" else ""
+        print(f"\nempathIQ - A/B test: running the SAME message through {len(variants)} versions of "
+              f"{p.name} ({', '.join(variants)}) to compare what each architecture produces.")
+        print(f"That's ~{total} model calls total, so this takes several minutes{fast}. "
+              "All replies print side by side at the end.\n")
     rows = []
     finals = {}
     for v in variants:
-        live = _live_printer() if a.live else None
+        live = _live_printer(full=a.full) if (a.live or a.full) else None
         if live:
             print(f"\n  {p.name}  |  variant {v}\n")
         res = _run_one(p, a.input, backend, v, progress=live)
@@ -167,7 +244,7 @@ def cmd_ab(a):
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="eer", description="Empathic Engine Researcher")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    sub = p.add_subparsers(dest="cmd")
 
     sub.add_parser("blocks").set_defaults(func=cmd_blocks)
     sub.add_parser("graphs").set_defaults(func=cmd_graphs)
@@ -189,8 +266,12 @@ def build_parser() -> argparse.ArgumentParser:
                        help="fast direct-API backend (needs `pip install anthropic` + ANTHROPIC_API_KEY)")
         s.add_argument("--live", action="store_true",
                        help="watch the pipeline light up block by block")
+        s.add_argument("--full", action="store_true",
+                       help="print each block's COMPLETE output, not the 60-char preview")
         s.add_argument("--judge", action="store_true")
         s.add_argument("--model", default=None)
+        s.add_argument("--timeout", type=int, default=300,
+                       help="per-block backend timeout in seconds (default 300)")
         if name == "run":
             s.add_argument("--variant", default="A_full")
         else:
@@ -207,6 +288,9 @@ def main(argv=None):
     except (AttributeError, ValueError):
         pass
     args = build_parser().parse_args(argv)
+    if getattr(args, "func", None) is None:
+        print(_quickstart_text(os.path.basename(sys.argv[0]) or "eer.py"))
+        return
     args.func(args)
 
 
