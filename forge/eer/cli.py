@@ -63,11 +63,12 @@ def _live_printer(full: bool = False):
     full=True prints each block's COMPLETE output instead of the 60-char preview."""
     def cb(node, block, output, latency_ms, ran):
         name = block.name if block else node
+        purpose = getattr(block, "purpose", "") if block else ""
         sym = block.symbol if block else f"[{node}]"
-        dots = "." * max(3, 32 - len(name))
         lat = f"{latency_ms/1000:.1f}s" if latency_ms else ""
         status = "ok" if ran else "--"
-        print(f"  {sym:7} {node:5} {name} {dots} {status} {lat:>6}", flush=True)
+        # name + plain-language purpose so cryptic block names (QTX, DTFX, ...) stay legible
+        print(f"  {sym:7} {node:5} {name:28.28} {purpose:30.30} {status:3} {lat:>6}", flush=True)
         if node == "INPUT":
             return
         text = output or ""
@@ -174,7 +175,9 @@ def _print_run_intro(p, kind: str, n_calls: int) -> None:
     print("Each block is one AI pass - observe, read motivation, empathize, respond, refine, "
           "then synthesize - run in order.")
     print(f"That's {n_calls} separate model calls (one per block; INPUT just reads your text), so a "
-          f"real run takes a few minutes{fast}. The final reply prints at the bottom.\n")
+          f"real run takes a few minutes{fast}. The final reply prints at the bottom.")
+    print("You're seeing the architecture RESPOND. empathIQ's real job is to SCORE replies like this "
+          "and compare architectures - that's the `ab` command.\n")
 
 
 def cmd_run(a):
@@ -186,6 +189,9 @@ def cmd_run(a):
         print(f"\n  {p.name}  |  {a.input!r}\n")
     res = _run_one(p, a.input, backend, a.variant, progress=live)
     print(f"\n=== {p.name} / variant {a.variant} ===\n")
+    if _backend_kind(a) == "mock":
+        print("*** MOCK / DRY RUN - placeholder text below, no model was called. "
+              "Drop --mock for a real reply. ***\n")
     print(res.final_expression)
     print("\n--- turn log (mechanical only) ---")
     _print_table(["Node", "Ran", "Latency(ms)", "OutHash"],
@@ -194,12 +200,19 @@ def cmd_run(a):
     m = mechanical(res)
     print(f"\nmechanical: nodes_run={m['nodes_run']} "
           f"total_latency_ms={m['total_latency_ms']} final_chars={m['final_chars']}")
+    failed = [r.node for r in res.turn_log if not r.ran and r.node != "INPUT"]
+    if failed:
+        print(f"note: {len(failed)} block(s) failed and were skipped ({', '.join(failed)}); "
+              "the run continued with the rest. See the Ran column above.")
     if a.judge:
         jb = make_backend("api" if a.api else "claude", model=a.model, timeout=a.timeout)
         scored = judge(res, jb)
         _print_table(["Judged metric", "Value", "Source"],
                      [[k, "?" if v.value is None else f"{v.value:.2f}", v.source]
                       for k, v in scored.items()])
+    if _backend_kind(a) != "mock":
+        print("\nnext: try another --input  ·  compare architectures with "
+              "`ab --variants A_full,B_no_EMPA,D_first_order_only`  ·  build a persona with `new -h`")
 
 
 def cmd_ab(a):
@@ -238,6 +251,11 @@ def cmd_ab(a):
     print(f"\n=== A/B on: {a.input!r} ===\n")
     _print_table(headers, rows)
     print("\n--- final expressions ---")
+    print("(what to notice: the variants differ ONLY in which blocks ran - A_full is the whole "
+          "architecture, B_no_EMPA drops the empathy block, D_first_order_only keeps just "
+          "INPUT/LIT/RESP/FINAL. Read for warmth, depth, and whether each still holds a boundary.)")
+    if kind == "mock":
+        print("(MOCK / DRY RUN: the texts below are placeholder, not real replies - drop --mock to compare for real.)")
     for v, text in finals.items():
         print(f"\n[{v}]\n{text}")
 

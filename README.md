@@ -27,6 +27,31 @@ run — that one needs a key). Swap the `--input "..."` for any situation, or us
 prompt from [`benchmark/prompts.json`](benchmark/prompts.json). **Full command reference and how
 to build your own personality: [`forge/README.md`](forge/README.md).**
 
+### What a run looks like
+
+`run` sends your message through the architecture and prints its reply. To the input
+`I keep starting things and not finishing`, the demo persona **Sol** answers:
+
+> You keep starting things and not finishing.
+>
+> Before we do anything with that — I don't think you handed me a flaw. I think you handed me
+> the thing you've been carrying *as if* it were one.
+>
+> You fall in love with beginnings. That pull, the aliveness of starting — it's real. It means
+> some part of you still feels reached for by the world. And I hear the tiredness in *keep*…
+>
+> So I won't tell you to finish more. One thing instead: when you begin something — what does
+> that first moment feel like, before any verdict gets to it?
+
+That is the **architecture _responding_** — a single bounded-empathic reply (note it *declines*
+the obvious "here's how to finish things" advice; holding that line is the behavior empathIQ is
+built to credit).
+
+**But the reply is the demo, not the point.** empathIQ is a *measuring instrument*: its real job
+is to **score** responses like this and **compare architectures** — `ab` runs the same message
+through the full pipeline vs. ablated versions so you can see what each block contributes. If you
+just want to chat, use `run`; if you want the benchmark, use `ab` (+ the judge pass).
+
 ---
 
 ## Why this exists
