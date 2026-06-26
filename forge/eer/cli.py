@@ -38,6 +38,11 @@ empathIQ — build an empathy architecture and test it for real.
 No command given, so here's how to start. You need Python 3 and the `claude`
 CLI — no API key, no setup:
 
+  New here? Let it walk you through one test, no flags to learn:
+     python benchmark/walkthrough.py
+
+Or drive it directly:
+
   1. instant offline check — proves it runs (fake text, ~2 sec)
      python {prog} run --personality sol --input "I keep starting things and not finishing" --mock --live
 
@@ -48,10 +53,13 @@ CLI — no API key, no setup:
      python {prog} ab --personality sol --input "I keep starting things and not finishing" --variants A_full,B_no_EMPA,D_first_order_only --live
 
 More:
-  python {prog} blocks     list the 16 empathy blocks
-  python {prog} graphs     list available graphs
-  python {prog} new -h     scaffold your own personality
-  python {prog} -h         full argument help
+  python {prog} blocks          list the 16 empathy blocks
+  python {prog} graphs          list available graphs (the wirings)
+  python {prog} personalities   list the characters you can run
+  python {prog} new -h          scaffold your own personality
+  python {prog} -h              full argument help
+
+Test over the empathy categories, then score it:  see benchmark/README.md
 
 Swap the --input "..." for any situation. Full guide: forge/README.md
 """
@@ -122,11 +130,54 @@ def cmd_blocks(_a):
 
 
 def cmd_graphs(_a):
+    import json
     import os
     from .personality import GRAPHS_DIR
-    for f in sorted(os.listdir(GRAPHS_DIR)):
-        if f.endswith(".json"):
-            print(f[:-5])
+    print("A graph is the WIRING of an empathy architecture — which blocks run, and in")
+    print("what order. A personality = a graph + a voice. (Run `blocks` to see what each")
+    print("block does; `new` to build a personality on a graph.)\n")
+    files = sorted(f for f in os.listdir(GRAPHS_DIR) if f.endswith(".json"))
+    if not files:
+        print("  (no graphs found)")
+        return
+    for f in files:
+        name = f[:-5]
+        try:
+            g = json.load(open(os.path.join(GRAPHS_DIR, f), encoding="utf-8"))
+            nodes = g.get("nodes", [])
+            ids = [n if isinstance(n, str) else (n.get("id") or n.get("name")) for n in nodes]
+            entry, exit_ = g.get("entry", "?"), g.get("exit", "?")
+            print(f"  {name}  —  {len(ids)} blocks")
+            print(f"    flow: {entry} ... {exit_}   "
+                  f"({entry} captures the input, {exit_} renders the reply; the blocks")
+            print(f"          between add empathy, some running in parallel)")
+            print(f"    blocks: {', '.join(i for i in ids if i)}")
+        except Exception as e:  # a malformed graph file shouldn't break the listing
+            print(f"  {name}  (could not parse: {type(e).__name__})")
+    print('\nTry one:  python empathiq.py run --personality sol --input "..." --live')
+
+
+def cmd_personalities(_a):
+    import json
+    import os
+    from .personality import PERSONALITIES_DIR
+    print("A personality = a graph (wiring) + a voice. These are the characters you can")
+    print("run. (Make one with `new`; see the wirings with `graphs`.)\n")
+    files = sorted(f for f in os.listdir(PERSONALITIES_DIR) if f.endswith(".json"))
+    if not files:
+        print("  (none yet — create one: python empathiq.py new --name vera --desc \"...\")")
+        return
+    for f in files:
+        try:
+            d = json.load(open(os.path.join(PERSONALITIES_DIR, f), encoding="utf-8"))
+            layer = d.get("persona_layer")
+            voiced = d.get("block_prompts") or {}
+            voice = f"custom voice ({len(voiced)} blocks)" if voiced else "default voice (no block overrides)"
+            print(f"  {d.get('name', f[:-5])}  —  {d.get('description','') or '(no description)'}")
+            print(f"    graph: {d.get('graph','default')}   layer: {layer if layer else '-'}   {voice}")
+        except Exception as e:  # a malformed personality file shouldn't break the listing
+            print(f"  {f[:-5]}  (could not parse: {type(e).__name__})")
+    print('\nRun one:  python empathiq.py run --personality <name> --input "..." --live')
 
 
 def cmd_diagram(a):
@@ -266,6 +317,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("blocks").set_defaults(func=cmd_blocks)
     sub.add_parser("graphs").set_defaults(func=cmd_graphs)
+    sub.add_parser("personalities").set_defaults(func=cmd_personalities)
 
     d = sub.add_parser("diagram"); d.add_argument("spec"); d.set_defaults(func=cmd_diagram)
 

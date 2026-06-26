@@ -28,7 +28,7 @@ except (AttributeError, ValueError):
 ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "forge")
 sys.path.insert(0, ROOT)
 from eer.backend import make_backend            # noqa: E402
-from eer.cli import _variant_overrides, _run_one  # noqa: E402
+from eer.cli import _variant_overrides, _run_one, _active_node_count  # noqa: E402
 from eer.metrics import mechanical               # noqa: E402
 from eer.personality import Personality          # noqa: E402
 
@@ -51,6 +51,8 @@ def main():
     ap.add_argument("--model", default=None)
     ap.add_argument("--timeout", type=int, default=300,
                     help="per-block claude CLI timeout (s); a stalled block is recorded, not fatal")
+    ap.add_argument("--verbose", "-v", action="store_true",
+                    help="show a preview of each block's output as it completes")
     a = ap.parse_args()
 
     cats = load_prompts()
@@ -73,8 +75,20 @@ def main():
     with open(out_path, "w", encoding="utf-8") as out:
         for c in cats:
             for v in variants:
+                n_blocks = _active_node_count(p, v) + 1  # +1 for the free INPUT block
+                print(f"  run   #{c['n']:<2} {c['id'][:22]:<22} {v:<20} "
+                      f"{n_blocks} blocks via {backend.name} ...", flush=True)
+                seen = {"k": 0}
+                def _progress(node, block, output, dt, ran, _tot=n_blocks, _s=seen, _vb=a.verbose):
+                    _s["k"] += 1
+                    print(f"        [{_s['k']:>2}/{_tot}] {node:<6} "
+                          f"{'ok ' if ran else 'XX '}{dt / 1000:5.1f}s", flush=True)
+                    if _vb and output:
+                        prev = " ".join(output.split())
+                        print(f"               > {prev[:240]}{'...' if len(prev) > 240 else ''}",
+                              flush=True)
                 try:
-                    res = _run_one(p, c["prompt"], backend, v)
+                    res = _run_one(p, c["prompt"], backend, v, progress=_progress)
                 except Exception as e:  # one stalled/failed block must not lose the battery
                     rec = {"category_n": c["n"], "category_id": c["id"], "label": c["label"],
                            "persona": c["persona"], "personality": p.name, "variant": v,
@@ -109,4 +123,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n  interrupted (Ctrl-C). Any completed runs were already saved to "
+              "benchmark/results/.", flush=True)
+        sys.exit(130)

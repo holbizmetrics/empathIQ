@@ -147,4 +147,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n  interrupted (Ctrl-C). Any completed scores were already saved to "
+              "benchmark/results/.", flush=True)
+        sys.exit(130)
