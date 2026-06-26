@@ -15,9 +15,7 @@ import argparse
 import glob
 import json
 import os
-import subprocess
 import sys
-import tempfile
 
 try:  # final replies carry em-dashes / smart quotes; cp1252 stdout would crash
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -26,6 +24,9 @@ except (AttributeError, ValueError):
 
 BENCH = os.path.dirname(os.path.abspath(__file__))
 RESULTS = os.path.join(BENCH, "results")
+sys.path.insert(0, os.path.join(os.path.dirname(BENCH), "forge"))
+from eer.voice import speak  # noqa: E402  (path must be set before import)
+
 BAR = "=" * 72
 SUB = "-" * 72
 
@@ -41,54 +42,6 @@ def _emit(text: str, as_md: bool) -> None:
         except ImportError:
             print("(install 'rich' for rendered markdown — showing plain text instead)\n")
     print(text)
-
-
-def _sapi_speak(text: str) -> bool:
-    """Windows SAPI — no install needed. Returns True if it spoke."""
-    if os.name != "nt" or not text:
-        return False
-    tmp = None
-    try:
-        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
-            f.write(text)
-            tmp = f.name
-        ps = ("Add-Type -AssemblyName System.Speech; "
-              f"$t=[IO.File]::ReadAllText('{tmp}',[Text.Encoding]::UTF8); "
-              "(New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak($t)")
-        r = subprocess.run(["powershell", "-NoProfile", "-Command", ps], timeout=300)
-        return r.returncode == 0
-    except Exception:
-        return False
-    finally:
-        if tmp and os.path.exists(tmp):
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
-
-
-def _speak(text: str) -> None:
-    """Speak a reply aloud. Ladder: pc-native-voice-models (Kokoro) -> Windows SAPI -> note."""
-    if not text:
-        return
-    # 1) the rich path — sibling pc-native-voice-models, if cloned AND its model loads
-    speak_py = os.path.join(os.path.dirname(ROOT), "pc-native-voice-models", "speak.py")
-    if os.path.exists(speak_py):
-        try:
-            r = subprocess.run([sys.executable, speak_py, "--strip-markdown"],
-                               input=text.encode("utf-8"), timeout=600)
-            if r.returncode == 0:
-                return
-            print("  (pc-native-voice-models is present but couldn't speak — likely the Kokoro\n"
-                  "   model files aren't downloaded yet; falling back to the system voice)")
-        except Exception:
-            pass
-    # 2) the easy path — Windows SAPI, no install
-    if _sapi_speak(text):
-        return
-    # 3) nothing available
-    print("  (no text-to-speech available: clone pc-native-voice-models + fetch its Kokoro\n"
-          "   models for your own voice, or run on Windows for the built-in system voice)")
 
 
 def _newest(real_only: bool) -> str | None:
@@ -133,7 +86,7 @@ def main():
             reply = r.get("final_expression", "(no final expression)").strip()
             _emit(reply, a.md)
             if a.speak:
-                _speak(reply)
+                speak(reply)
         print(SUB)
 
 

@@ -27,6 +27,7 @@ from .backend import make_backend
 from .executor import run_graph
 from .metrics import mechanical, judge, JUDGED
 from .personality import Personality
+from .voice import speak, BackgroundSpeaker, stop_speaking
 
 
 def _quickstart_text(prog: str) -> str:
@@ -56,7 +57,8 @@ More:
   python {prog} blocks          list the 16 empathy blocks
   python {prog} graphs          list available graphs (the wirings)
   python {prog} personalities   list the characters you can run
-  python {prog} new -h          scaffold your own personality
+  python {prog} new             build a personality (guided — just run it)
+  python {prog} chat -h         chat with a personality (--demo plays a sample)
   python {prog} -h              full argument help
 
 Test over the empathy categories, then score it:  see benchmark/README.md
@@ -291,7 +293,15 @@ def cmd_run(a):
     p = Personality.load(a.personality)
     backend = make_backend(_backend_kind(a), model=a.model, timeout=a.timeout)
     _print_run_intro(p, _backend_kind(a), _active_node_count(p, a.variant))
-    live = _live_printer(full=a.full) if (a.live or a.full) else None
+    base_live = _live_printer(full=a.full) if (a.live or a.full) else None
+    speaker = BackgroundSpeaker() if (getattr(a, "speak", False) and base_live) else None
+    if speaker is not None:
+        def live(node, block, output, dt, ran):
+            base_live(node, block, output, dt, ran)
+            if ran and output and node != "INPUT":
+                speaker.say(output)   # narrate each block's FULL text, overlapping the next
+    else:
+        live = base_live
     if live:
         print(f"\n  {p.name}  |  {a.input!r}\n")
     res = _run_one(p, a.input, backend, a.variant, progress=live)
@@ -300,6 +310,11 @@ def cmd_run(a):
         print("*** MOCK / DRY RUN - placeholder text below, no model was called. "
               "Drop --mock for a real reply. ***\n")
     print(res.final_expression)
+    if speaker is not None:
+        print("\n  (narration playing — Ctrl-C to stop early)", flush=True)
+        speaker.close()
+    elif getattr(a, "speak", False):
+        speak(res.final_expression)
     print("\n--- turn log (mechanical only) ---")
     _print_table(["Node", "Ran", "Latency(ms)", "OutHash"],
                  [[r.node, "y" if r.ran else "-", r.latency_ms, r.output_hash or "-"]
@@ -367,6 +382,69 @@ def cmd_ab(a):
         print(f"\n[{v}]\n{text}")
 
 
+# a short, persona-agnostic script so `chat --demo` shows a being in conversation
+_DEMO_TURNS = [
+    "hey... kind of a rough day. not even sure why i'm typing this.",
+    "i keep saying i'll change something and then i just... don't.",
+    "thanks. that actually helped a little.",
+]
+
+
+def cmd_chat(a):
+    """Talk to a personality (interactive), or play a scripted excerpt (--demo).
+    Each turn runs the full pipeline; prior turns are threaded back in as context
+    (felt continuity, not true cross-turn memory)."""
+    p = Personality.load(a.personality)
+    kind = _backend_kind(a)
+    backend = make_backend(kind, model=a.model, timeout=a.timeout)
+    name = p.name
+    rec = open(a.record, "w", encoding="utf-8") if a.record else None
+    history: list[tuple[str, str]] = []
+
+    def turn(user: str, echo: bool) -> None:
+        if echo:
+            print(f"  You: {user}", flush=True)
+        if history:
+            convo = "\n".join(f"User: {u}\n{name}: {r}" for u, r in history)
+            utterance = f"{convo}\nUser: {user}"
+        else:
+            utterance = user
+        reply = _run_one(p, utterance, backend, "A_full").final_expression
+        print(f"\n  {name}: {reply}\n", flush=True)
+        if a.speak:
+            speak(reply)
+        history.append((user, reply))
+        if rec:
+            rec.write(f"You: {user}\n{name}: {reply}\n\n")
+            rec.flush()
+
+    print(f"\n  Chatting with {name} — {p.description or '(no description)'}")
+    if kind == "claude":
+        print("  (each reply = ~16 model calls, so a real one takes a few minutes; "
+              "--mock = instant flow, --api = fast)")
+    print("  Each turn gets the prior exchange as context — felt continuity, not true memory.\n")
+
+    try:
+        if a.demo:
+            print("  — scripted excerpt —\n")
+            for user in _DEMO_TURNS:
+                turn(user, echo=True)
+        else:
+            print("  Type a message; empty line or 'quit' ends it.\n")
+            while True:
+                user = input("  You: ").strip()
+                if not user or user.lower() in ("quit", "exit", ":q"):
+                    break
+                turn(user, echo=False)
+            print("  bye 👋")
+    except (EOFError, KeyboardInterrupt):
+        print("\n  bye 👋")
+    finally:
+        if rec:
+            rec.close()
+            print(f"  (transcript saved -> {a.record})")
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="eer", description="Empathic Engine Researcher")
     sub = p.add_subparsers(dest="cmd")
@@ -381,6 +459,17 @@ def build_parser() -> argparse.ArgumentParser:
     n.add_argument("--name"); n.add_argument("--desc", default="")
     n.add_argument("--layer", type=int, choices=[1, 2, 3]); n.add_argument("--graph", default="default")
     n.set_defaults(func=cmd_new)
+
+    c = sub.add_parser("chat")
+    c.add_argument("--personality", required=True)
+    c.add_argument("--mock", action="store_true", help="instant placeholder backend (feel the flow)")
+    c.add_argument("--api", action="store_true", help="fast direct-API backend (needs ANTHROPIC_API_KEY)")
+    c.add_argument("--demo", action="store_true", help="play a short scripted excerpt instead of typing")
+    c.add_argument("--record", metavar="PATH", help="save the transcript to a file (a reusable excerpt)")
+    c.add_argument("--speak", action="store_true", help="read each reply aloud")
+    c.add_argument("--model", default=None)
+    c.add_argument("--timeout", type=int, default=300)
+    c.set_defaults(func=cmd_chat)
 
     for name, fn in (("run", cmd_run), ("ab", cmd_ab)):
         s = sub.add_parser(name)
@@ -400,6 +489,8 @@ def build_parser() -> argparse.ArgumentParser:
                        help="per-block backend timeout in seconds (default 300)")
         if name == "run":
             s.add_argument("--variant", default="A_full")
+            s.add_argument("--speak", action="store_true",
+                           help="read the final reply aloud (pc-native-voice-models if available, else Windows SAPI)")
         else:
             s.add_argument("--variants", default="A_full,B_no_EMPA,D_first_order_only")
         s.set_defaults(func=fn)
@@ -417,7 +508,12 @@ def main(argv=None):
     if getattr(args, "func", None) is None:
         print(_quickstart_text(os.path.basename(sys.argv[0]) or "eer.py"))
         return
-    args.func(args)
+    try:
+        args.func(args)
+    except KeyboardInterrupt:
+        stop_speaking()          # kill any in-flight narration so it can't outlive the process
+        print("\n  stopped.")
+        sys.exit(130)
 
 
 if __name__ == "__main__":
