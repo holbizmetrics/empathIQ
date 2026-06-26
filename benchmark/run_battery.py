@@ -31,6 +31,7 @@ from eer.backend import make_backend            # noqa: E402
 from eer.cli import _variant_overrides, _run_one, _active_node_count  # noqa: E402
 from eer.metrics import mechanical               # noqa: E402
 from eer.personality import Personality          # noqa: E402
+from eer.voice import BackgroundSpeaker, stop_speaking  # noqa: E402
 
 BENCH = os.path.dirname(os.path.abspath(__file__))
 
@@ -53,6 +54,8 @@ def main():
                     help="per-block claude CLI timeout (s); a stalled block is recorded, not fatal")
     ap.add_argument("--verbose", "-v", action="store_true",
                     help="show a preview of each block's output as it completes")
+    ap.add_argument("--speak", action="store_true",
+                    help="read each block aloud as it lands (heavy — best scoped with --only/--variants)")
     a = ap.parse_args()
 
     cats = load_prompts()
@@ -72,6 +75,7 @@ def main():
     out_path = os.path.join(BENCH, "results", f"battery-{stamp}-{tag}.jsonl")
 
     rows = []
+    speaker = BackgroundSpeaker() if a.speak else None
     with open(out_path, "w", encoding="utf-8") as out:
         for c in cats:
             for v in variants:
@@ -79,7 +83,8 @@ def main():
                 print(f"  run   #{c['n']:<2} {c['id'][:22]:<22} {v:<20} "
                       f"{n_blocks} blocks via {backend.name} ...", flush=True)
                 seen = {"k": 0}
-                def _progress(node, block, output, dt, ran, _tot=n_blocks, _s=seen, _vb=a.verbose):
+                def _progress(node, block, output, dt, ran, _tot=n_blocks, _s=seen,
+                              _vb=a.verbose, _sp=speaker):
                     _s["k"] += 1
                     print(f"        [{_s['k']:>2}/{_tot}] {node:<6} "
                           f"{'ok ' if ran else 'XX '}{dt / 1000:5.1f}s", flush=True)
@@ -87,6 +92,8 @@ def main():
                         prev = " ".join(output.split())
                         print(f"               > {prev[:240]}{'...' if len(prev) > 240 else ''}",
                               flush=True)
+                    if _sp is not None and ran and output and node != "INPUT":
+                        _sp.say(output)   # narrate the FULL block text, overlapping the next
                 try:
                     res = _run_one(p, c["prompt"], backend, v, progress=_progress)
                 except Exception as e:  # one stalled/failed block must not lose the battery
@@ -112,6 +119,9 @@ def main():
                 print(f"  done  #{c['n']:<2} {c['id'][:22]:<22} {v:<20} "
                       f"nodes={m['nodes_run']:<2} chars={m['final_chars']}")
 
+    if speaker is not None:
+        speaker.close()
+
     print(f"\nwrote {out_path}  ({len(rows)} runs, grading deferred)")
     print("\nMECHANICAL SUMMARY (no judged metrics by design):")
     hdr = ["#", "category", "variant", "nodes", "latency_ms", "chars"]
@@ -126,6 +136,7 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
+        stop_speaking()
         print("\n  interrupted (Ctrl-C). Any completed runs were already saved to "
               "benchmark/results/.", flush=True)
         sys.exit(130)

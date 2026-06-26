@@ -400,6 +400,7 @@ def cmd_chat(a):
     name = p.name
     rec = open(a.record, "w", encoding="utf-8") if a.record else None
     history: list[tuple[str, str]] = []
+    n_blocks = _active_node_count(p, "A_full") + 1
 
     def turn(user: str, echo: bool) -> None:
         if echo:
@@ -409,7 +410,16 @@ def cmd_chat(a):
             utterance = f"{convo}\nUser: {user}"
         else:
             utterance = user
-        reply = _run_one(p, utterance, backend, "A_full").final_expression
+        prog = None
+        if kind != "mock":   # a real turn is ~16 silent model calls (~min); show it's alive
+            print(f"  ...{name} is thinking ({n_blocks} blocks, a few min):", flush=True)
+            counter = {"k": 0}
+
+            def prog(node, block, output, dt, ran, _t=n_blocks, _c=counter):
+                _c["k"] += 1
+                print(f"    [{_c['k']:>2}/{_t}] {node:<6} {'ok' if ran else 'XX'} {dt / 1000:4.1f}s",
+                      flush=True)
+        reply = _run_one(p, utterance, backend, "A_full", progress=prog).final_expression
         print(f"\n  {name}: {reply}\n", flush=True)
         if a.speak:
             speak(reply)
