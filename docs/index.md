@@ -36,6 +36,7 @@ These all live in the repository, which stays the single source of truth:
 - **What it measures** → [the 11 empathy-interaction categories](https://github.com/holbizmetrics/empathIQ/tree/master/benchmark) — derived bottom-up from real example texts, with a gap analysis and the orthogonal scoring axes.
 - **How it scores** → the [rubric](https://github.com/holbizmetrics/empathIQ/tree/master/rubric) and the [external-judge protocol](https://github.com/holbizmetrics/empathIQ/tree/master/judge) (judge-first, anti-bias).
 - **The story** → the [founder sprint log](https://github.com/holbizmetrics/empathIQ/blob/master/FOUNDER-SPRINT.md).
+- **The plan** → the [roadmap](https://github.com/holbizmetrics/empathIQ/blob/master/ROADMAP.md) — the one win condition, the order, and where we actually are.
 
 ## Honesty notes
 
