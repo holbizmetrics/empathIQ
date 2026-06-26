@@ -185,10 +185,66 @@ def cmd_diagram(a):
 
 
 def cmd_new(a):
+    if not a.name:                       # bare `new` -> guided, no flags/JSON
+        return _guided_new()
     p = Personality(name=a.name, description=a.desc or "", persona_layer=a.layer,
                     graph_ref=a.graph)
     path = p.save()
     print(f"created personality '{a.name}' -> {path}")
+
+
+# blocks whose prompt most shapes a personality's "voice" (curated subset of the 16)
+_VOICE_BLOCKS = [
+    ("MECH", "how it reads people's motivation & emotion"),
+    ("EMPA", "how it empathizes"),
+    ("RESP", "how it responds in the moment"),
+    ("FINAL", "how it phrases the final reply"),
+]
+
+
+def _guided_new():
+    """Build a personality by answering questions — no flags, no JSON editing."""
+    import os
+    import subprocess
+    import sys
+    from .personality import Personality, PERSONALITIES_DIR
+    try:
+        print("\n  Build a personality — answer a few questions, no JSON needed.\n")
+        name = ""
+        while not name:
+            name = input("  Name (one word, e.g. vera): ").strip()
+        if os.path.exists(os.path.join(PERSONALITIES_DIR, f"{name.lower()}.json")):
+            if not input(f"  '{name}' already exists — overwrite? [y/N]: ").strip().lower().startswith("y"):
+                print("  cancelled — nothing changed.")
+                return
+        desc = input("  Describe its vibe in a sentence\n"
+                     "    (e.g. 'warm but holds a firm boundary'): ").strip()
+        print("\n  Association depth — how deep its perspective-taking runs.")
+        print("  (A soft signal to the model: 1 lighter, 2 medium, 3 deeper.)")
+        lr = input("  Layer 1/2/3 [2]: ").strip()
+        layer = int(lr) if lr in ("1", "2", "3") else 2
+
+        print("\n  Optional — give it a custom voice on a few key blocks.")
+        print("  Type one plain-language instruction per block, or press Enter to skip.\n")
+        block_prompts = {}
+        for code, gloss in _VOICE_BLOCKS:
+            line = input(f"  {code} — {gloss}:\n    > ").strip()
+            if line:
+                block_prompts[code] = line
+
+        p = Personality(name=name, description=desc, persona_layer=layer,
+                        graph_ref="default", block_prompts=block_prompts)
+        path = p.save()
+        voiced = f"{len(block_prompts)} custom block(s)" if block_prompts else "default voice"
+        print(f"\n  Created '{name}'  ({voiced})\n    {path}")
+
+        if input("\n  Try it now on a sample, instant (mock)? [Y/n]: ").strip().lower() in ("", "y", "yes"):
+            subprocess.run([sys.executable, sys.argv[0], "run", "--personality", name,
+                            "--input", "I keep starting things and never finishing.",
+                            "--mock", "--live"])
+        print(f'\n  Run it for real:  python empathiq.py run --personality {name} --input "..." --live')
+    except (KeyboardInterrupt, EOFError):
+        print("\n  cancelled — nothing saved.")
 
 
 def _run_one(p: Personality, utterance: str, backend, variant: str, progress=None):
@@ -322,7 +378,7 @@ def build_parser() -> argparse.ArgumentParser:
     d = sub.add_parser("diagram"); d.add_argument("spec"); d.set_defaults(func=cmd_diagram)
 
     n = sub.add_parser("new")
-    n.add_argument("--name", required=True); n.add_argument("--desc", default="")
+    n.add_argument("--name"); n.add_argument("--desc", default="")
     n.add_argument("--layer", type=int, choices=[1, 2, 3]); n.add_argument("--graph", default="default")
     n.set_defaults(func=cmd_new)
 
