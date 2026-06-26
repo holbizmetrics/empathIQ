@@ -64,6 +64,20 @@ Do not run the judge until **all four** hold:
 unbuilt.** Days 8–9 moved usability hard and the flip-gate not at all; criterion #1 has
 its first finding (`only_<block>` drops FINAL → emits nothing, needs INPUT+FINAL kept in).
 
+**Known instrument finding — order-dependent reads (2026-06-26).** The blocks read
+**wildcards** (`RESP` ← `$.analysis.*`, `RESO` ← `$.output.*`, `FINAL` ← `$.analysis`), so
+each consumes *"everything on the blackboard so far."* That makes the architecture's
+output **order-dependent — not purely a function of its declared wiring**: two valid
+orderings of the same graph produce different replies (today hidden, because `topo_order`
+is deterministic). Consequence for the benchmark: an **ablation delta tangles the removed
+block's direct contribution with its footprint on every wildcard-reader downstream** — a
+confound for flip-gate criterion #2 ("are the deltas sensibly shaped?"). The fix
+(deliberate; *changes outputs*, needs re-validation): tighten block reads to **specific
+keys matching the edges** → order-independent → parallel-safe → cleaner ablation. Surfaced
+while attempting a parallel-execution speedup, which was **built, verified against
+sequential, found non-equivalent, and reverted** rather than ship a mode that silently
+changes what's measured.
+
 ## The split
 
 - **Holger** — held-out items + the public posts.
