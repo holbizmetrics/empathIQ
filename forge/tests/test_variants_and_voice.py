@@ -27,8 +27,10 @@ def test_variant_overrides_mapping():
     assert _variant_overrides("full") == {}
     assert _variant_overrides("D_first_order_only") == {"enable_only": ["INPUT", "LIT", "RESP", "FINAL"]}
     assert _variant_overrides("no_EMPA") == {"disable_nodes": ["EMPA"]}
-    assert _variant_overrides("only_EMPA") == {"enable_only": ["EMPA"]}
-    assert _variant_overrides("only_LIT+RESP") == {"enable_only": ["LIT", "RESP"]}
+    # only_<X> injects the INPUT+FINAL output scaffold, or isolation emits nothing
+    # (bare single-block isolation degenerates — flip-gate criterion #1; see ablate.py).
+    assert _variant_overrides("only_EMPA") == {"enable_only": ["EMPA", "INPUT", "FINAL"]}
+    assert _variant_overrides("only_LIT+RESP") == {"enable_only": ["LIT", "RESP", "INPUT", "FINAL"]}
 
 
 def test_variant_names_are_case_insensitive():

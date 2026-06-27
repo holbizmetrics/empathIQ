@@ -4,7 +4,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ablate import run_ablation  # noqa: E402
+from ablate import run_ablation, run_isolation, validate_instrument  # noqa: E402
+from eer.cli import _variant_overrides  # noqa: E402
 
 
 def test_ablation_covers_every_block_but_input():
@@ -32,6 +33,29 @@ def test_every_block_feeds_the_output_path():
     # output (none are structurally dead). This is the clean mock-level finding.
     _, _, rows = run_ablation("sol", "test input", "mock")
     assert all(r["changed"] for r in rows)
+
+
+def test_every_isolation_path_emits_cleanly():
+    # flip-gate criterion #1: only_<X> (block + INPUT/FINAL scaffold) never degenerates
+    # to "(no output produced)". This is the fix for the bare-only_<X>-emits-nothing finding.
+    _, _, rows = run_isolation("sol", "test input", "mock")
+    assert rows, "isolation produced no rows"
+    assert all(r["emits"] for r in rows)
+
+
+def test_validate_passes_criterion_1():
+    v = validate_instrument("sol", "test input", "mock")
+    assert v["criterion_1_pass"] is True
+    assert v["removal_empty"] == []
+    assert v["isolation_empty"] == []
+
+
+def test_only_variant_injects_output_scaffold():
+    # the interactive `ab` command's only_<X> must keep INPUT+FINAL or isolation emits nothing
+    keep = set(_variant_overrides("only_EMPA")["enable_only"])
+    assert {"EMPA", "INPUT", "FINAL"} <= keep
+    multi = set(_variant_overrides("only_LIT+MECH")["enable_only"])
+    assert {"LIT", "MECH", "INPUT", "FINAL"} <= multi
 
 
 if __name__ == "__main__":

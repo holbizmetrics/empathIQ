@@ -110,7 +110,16 @@ def _variant_overrides(name: str) -> dict:
         block = name.split("no_", 1)[1].upper()
         return {"disable_nodes": [block]}
     if n.startswith("only_"):
-        return {"enable_only": [b.upper() for b in name[5:].split("+")]}
+        keep = [b.upper() for b in name[5:].split("+")]
+        # Isolation needs the output scaffold or it emits "(no output produced)":
+        # INPUT captures the utterance and FINAL writes the delivered reply (FINAL
+        # reads $.analysis, so the isolated block's contribution still flows through).
+        # Bare only_<X> degenerates for any block that doesn't write an $.output.* key —
+        # see ablate.py --validate (flip-gate criterion #1).
+        for scaffold in ("INPUT", "FINAL"):
+            if scaffold not in keep:
+                keep.append(scaffold)
+        return {"enable_only": keep}
     return {}
 
 
