@@ -559,8 +559,8 @@ def build_parser() -> argparse.ArgumentParser:
                        help="deterministic offline backend (no API)")
         s.add_argument("--api", action="store_true",
                        help="fast direct-API backend (needs `pip install anthropic` + ANTHROPIC_API_KEY)")
-        s.add_argument("--live", action="store_true",
-                       help="watch the pipeline light up block by block")
+        s.add_argument("--live", "--verbose", "-v", dest="live", action="store_true",
+                       help="watch the pipeline light up block by block (alias: --verbose / -v)")
         s.add_argument("--full", action="store_true",
                        help="print each block's COMPLETE output, not the 60-char preview")
         s.add_argument("--judge", action="store_true")

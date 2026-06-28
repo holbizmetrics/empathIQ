@@ -37,6 +37,10 @@ def main(argv=None) -> int:
     ap.add_argument("--only", default=None, help="restrict to one category id (a smaller real smoke)")
     ap.add_argument("--mock", action="store_true", help="instant fake-text dry-run (proves wiring)")
     ap.add_argument("--api", action="store_true", help="fast direct-API backend (needs ANTHROPIC_API_KEY)")
+    ap.add_argument("--live", "--verbose", "-v", dest="live", action="store_true",
+                    help="stream each block's preview as it runs (forwarded to run_battery; alias: --verbose / -v)")
+    ap.add_argument("--full", action="store_true",
+                    help="stream each block's COMPLETE output as it runs (forwarded to run_battery)")
     a = ap.parse_args(argv)
 
     variants = f"{a.on},{a.baseline}"
@@ -48,6 +52,10 @@ def main(argv=None) -> int:
         battery.append("--api")
     if a.only:
         battery += ["--only", a.only]
+    if a.live:
+        battery.append("--live")
+    if a.full:
+        battery.append("--full")
 
     print(f"[1/2] dual-arm battery: {a.on} vs {a.baseline}"
           f"{' (mock)' if a.mock else ' (REAL — this takes a while)'}\n", flush=True)

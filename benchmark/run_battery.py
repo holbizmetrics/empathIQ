@@ -28,7 +28,7 @@ except (AttributeError, ValueError):
 ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "forge")
 sys.path.insert(0, ROOT)
 from eer.backend import make_backend            # noqa: E402
-from eer.cli import _variant_overrides, _run_one, _active_node_count  # noqa: E402
+from eer.cli import _variant_overrides, _run_one, _active_node_count, _gutter_lines  # noqa: E402
 from eer.metrics import mechanical               # noqa: E402
 from eer.personality import Personality          # noqa: E402
 from eer.voice import BackgroundSpeaker, stop_speaking  # noqa: E402
@@ -52,8 +52,10 @@ def main():
     ap.add_argument("--model", default=None)
     ap.add_argument("--timeout", type=int, default=300,
                     help="per-block claude CLI timeout (s); a stalled block is recorded, not fatal")
-    ap.add_argument("--verbose", "-v", action="store_true",
-                    help="show a preview of each block's output as it completes")
+    ap.add_argument("--live", "--verbose", "-v", dest="live", action="store_true",
+                    help="stream a preview of each block's output as it completes (alias: --verbose / -v)")
+    ap.add_argument("--full", action="store_true",
+                    help="stream each block's COMPLETE output as it completes, not the 240-char preview")
     ap.add_argument("--speak", action="store_true",
                     help="read each block aloud as it lands (heavy — best scoped with --only/--variants)")
     a = ap.parse_args()
@@ -84,11 +86,14 @@ def main():
                       f"{n_blocks} blocks via {backend.name} ...", flush=True)
                 seen = {"k": 0}
                 def _progress(node, block, output, dt, ran, _tot=n_blocks, _s=seen,
-                              _vb=a.verbose, _sp=speaker):
+                              _vb=a.live, _full=a.full, _sp=speaker):
                     _s["k"] += 1
                     print(f"        [{_s['k']:>2}/{_tot}] {node:<6} "
                           f"{'ok ' if ran else 'XX '}{dt / 1000:5.1f}s", flush=True)
-                    if _vb and output:
+                    if _full and output:
+                        for _gl in _gutter_lines(output, gutter="               | "):
+                            print(_gl, flush=True)
+                    elif _vb and output:
                         prev = " ".join(output.split())
                         print(f"               > {prev[:240]}{'...' if len(prev) > 240 else ''}",
                               flush=True)
