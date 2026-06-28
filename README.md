@@ -54,7 +54,55 @@ just want to chat, use `run`; if you want the benchmark, use `ab` (+ the judge p
 
 ---
 
+## Running the benchmark
+
+`run`/`ab` above are *single replies*. The **benchmark** runs the designed C1–C10 items through
+the full architecture *and* ablated variants, then scores them.
+
+```bash
+# 1. dry-run the whole pipeline offline (instant, fake text — proves it works end to end)
+python benchmark/run_battery.py --mock
+
+# 2. collect REAL outputs (scope it — the full battery is hundreds of model calls)
+python benchmark/run_battery.py --only humor_warm_performative --variants A_full,D_first_order_only
+
+# 3. score the real outputs (preliminary SELF-score — useful, never the headline)
+python benchmark/score_battery.py     # single judge
+python benchmark/score_panel.py       # 3-judge panel + cross-judge disagreement
+```
+
+Outputs land in `benchmark/results/`. Scoring only reads **real** outputs (`*-real.jsonl`); a
+`--mock` battery is placeholder text and is deliberately not scored.
+
+**The headline needs an *external* judge** — a different model family, because a system never
+scores itself. Build a blind, randomized judge packet from your stored outputs:
+
+```bash
+python benchmark/make_cross_family_packet.py --on A_full --baseline D_first_order_only
+```
+
+That writes a `packet.md` you hand to an outside judge (blind to which arm is which) plus a sealed
+key to score it back. The external-judge *run* is the one piece that needs a non-Claude model.
+
+Inspect the engine any time:
+
+```bash
+python empathiq.py blocks -v     # the 16 blocks: what each reads, writes, and actually does
+python empathiq.py personalities # the characters you can run
+python empathiq.py new           # build your own (guided)
+```
+
+---
+
 ## Why this exists
+
+This isn't abstract. You've seen the precedents — a company rolls out an AI agent at scale, and
+customers end up resenting being *led through* by it. Not because it lacked information, but
+because they felt **misunderstood**: processed, not heard. Enough of these cases have surfaced
+that "always let people reach a human" became a standard retreat. The lesson underneath them is
+the same — what broke wasn't the model's *knowledge*; it was empathy, and empathy is a property
+of the **system** a user talks to, not the bare weights. For an agent to be callable and trusted,
+that gap has to be closed — which first means it has to be **measured**. That's what empathIQ is for.
 
 Existing EQ benchmarks (e.g. EQ-Bench3) score an **endpoint** — `gpt-5`, `claude-opus`. But the
 thing a user actually talks to is often a **system**: a base model *plus* a persona/identity

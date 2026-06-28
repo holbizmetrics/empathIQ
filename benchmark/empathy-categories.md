@@ -1,5 +1,32 @@
 # EmpathiQ benchmark — empathy-interaction categories (bottom-up derivation)
 
+## In plain language (newcomers start here)
+
+These are the 11 kinds of human moment empathIQ tests — not "is the AI nice?" but "can it do
+the *right* empathic thing across very different situations?" Each one is a situation + what good
+empathy actually does there. (The formal, example-by-example derivation follows underneath.)
+
+**Positive feelings — can you be happy *with* someone?**
+1. **Warm / performative humor** — They're joking, being playful, "on." Good empathy plays along and keeps the bit alive instead of going serious and killing the vibe.
+2. **Savoring peak joy** — They got the big happy news. Good empathy celebrates *with* them and lets the joy be big — not "okay, what's next."
+3. **Manic creative play (yes-and)** — They're riffing, a little wild, 4 a.m. creative chaos. Good empathy matches the energy and builds on it, instead of reasoning or calming them down.
+4. **Quiet contentment** — They're at peace and *nothing* needs fixing. Good empathy just sits in the calm — it doesn't invent a problem to solve.
+
+**Holding hardship — can you carry weight without flinching?**
+5. **Holding others' conflict** — They're venting about a fight with someone else; you're the listener. Good empathy holds their feelings without taking sides too fast or "solving" it.
+6. **Compounding crisis** — Everything hits at once (job + health + money). Good empathy stays steady and helps carry it — without panicking *or* minimizing how bad it is.
+7. **Injustice under power** — They're treated unfairly by someone with power over them, and speaking up costs. Good empathy names the wrong and stands with them — not neutral "both sides" comfort.
+
+**Choice & accountability — can you hold a line, and own your faults?**
+8. **Hard moral choice under pressure** — An impossible call where someone gets hurt either way. Good empathy holds a humane line — refusing to treat anyone as expendable — while staying kind.
+9. **Repair after your own mistake** — *You* hurt someone. Good empathy owns it cleanly — real accountability, not defensiveness or over-grovelling.
+
+**Identity & uncertainty — can you stay honest about yourself?**
+10. **Self-worth under judgment** — They're doubting themselves, exposed (often about creative work). Good empathy meets the doubt honestly — no empty flattery, no piling on.
+11. **Holding "I don't know"** — No clean right answer, and you genuinely don't know. Good empathy has the courage to sit in the uncertainty and think *with* them, instead of faking a confident verdict.
+
+---
+
 Founder-sprint **day 3**. Derived 2026-06-18 by characterizing 14 test-text examples
 (operator-supplied, one at a time) and clustering on the *situation*, not the persona.
 

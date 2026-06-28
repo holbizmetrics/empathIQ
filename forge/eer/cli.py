@@ -19,7 +19,9 @@ light up block by block. Add --judge to score soft metrics with an LLM judge
 from __future__ import annotations
 import argparse
 import os
+import shutil
 import sys
+import textwrap
 
 from . import blocks as blockmod
 from . import diagram as diagrammod
@@ -67,6 +69,23 @@ Swap the --input "..." for any situation. Full guide: forge/README.md
 """
 
 
+def _gutter_lines(text, gutter="            | ", max_width=90):
+    """Yield gutter-prefixed output lines for --full: wrap long prose to a readable
+    column, but pass code-fenced blocks and already-short lines through verbatim, so
+    ASCII diagrams / tables / the PRES rhythm map keep their alignment."""
+    width = min(max_width, max(40, shutil.get_terminal_size((100, 24)).columns - len(gutter)))
+    in_fence = False
+    for line in (text.splitlines() or [""]):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            yield gutter + line
+        elif in_fence or len(line) <= width:
+            yield gutter + line
+        else:
+            for wl in textwrap.wrap(line, width=width):
+                yield gutter + wl
+
+
 def _live_printer(full: bool = False):
     """A progress callback that draws the pipeline lighting up block by block.
     ASCII-only structural glyphs so it records cleanly in any terminal.
@@ -83,8 +102,8 @@ def _live_printer(full: bool = False):
             return
         text = output or ""
         if full:
-            for line in (text.splitlines() or [""]):
-                print(f"            | {line}", flush=True)
+            for gl in _gutter_lines(text):
+                print(gl, flush=True)
             print(flush=True)
         else:
             peek = " ".join(text.split())
@@ -135,7 +154,40 @@ def _print_table(headers: list[str], rows: list[list[str]]) -> None:
         print(line(r))
 
 
-def cmd_blocks(_a):
+def _entry(name, description=None, meta=None, body=None, *, width=72, indent="  "):
+    """Uniform list-entry renderer shared by `personalities`, `blocks -v`, `graphs`.
+
+    name        header line
+    description one-line summary, wrapped under the name
+    meta        list of (key, value) -> one "· k v   k v" tag line (blank/'-' values dropped)
+    body        list of (label, text) -> extra wrapped paragraphs (e.g. a block's instruction)
+    """
+    sub = indent + "  "
+    print(f"{indent}{name}")
+    for ln in (textwrap.wrap(description, width=width) if description else []):
+        print(f"{sub}{ln}")
+    if meta:
+        tags = "   ".join(f"{k} {v}" for k, v in meta if v not in (None, "", "-"))
+        if tags:
+            print(f"{sub}· {tags}")
+    for label, text in (body or []):
+        wrapped = textwrap.wrap(text, width=width)
+        if not wrapped:
+            continue
+        print(f"{sub}{label}: {wrapped[0]}")
+        pad = " " * (len(label) + 2)
+        for ln in wrapped[1:]:
+            print(f"{sub}{pad}{ln}")
+    print()
+
+
+def cmd_blocks(a):
+    if getattr(a, "verbose", False):
+        for b in blockmod.BLOCKS.values():
+            meta = [("v", b.version), ("reads", b.reads), ("writes", b.writes)]
+            body = [("does", b.instruction)] if b.instruction else None
+            _entry(f"{b.id}  {b.name}", b.purpose, meta, body)
+        return
     rows = [[b.id, b.name, b.purpose] for b in blockmod.BLOCKS.values()]
     _print_table(["ID", "Name", "Purpose"], rows)
 
@@ -183,9 +235,11 @@ def cmd_personalities(_a):
             d = json.load(open(os.path.join(PERSONALITIES_DIR, f), encoding="utf-8"))
             layer = d.get("persona_layer")
             voiced = d.get("block_prompts") or {}
-            voice = f"custom voice ({len(voiced)} blocks)" if voiced else "default voice (no block overrides)"
-            print(f"  {d.get('name', f[:-5])}  —  {d.get('description','') or '(no description)'}")
-            print(f"    graph: {d.get('graph','default')}   layer: {layer if layer else '-'}   {voice}")
+            voice = f"custom ({len(voiced)} blocks)" if voiced else "default"
+            meta = [("graph", d.get("graph", "default")),
+                    ("layer", layer if layer else "-"),
+                    ("voice", voice)]
+            _entry(d.get("name", f[:-5]), d.get("description", "") or "(no description)", meta)
         except Exception as e:  # a malformed personality file shouldn't break the listing
             print(f"  {f[:-5]}  (could not parse: {type(e).__name__})")
     print('\nRun one:  python empathiq.py run --personality <name> --input "..." --live')
@@ -206,10 +260,14 @@ def cmd_new(a):
 
 # blocks whose prompt most shapes a personality's "voice" (curated subset of the 16)
 _VOICE_BLOCKS = [
-    ("MECH", "how it reads people's motivation & emotion"),
-    ("EMPA", "how it empathizes"),
-    ("RESP", "how it responds in the moment"),
-    ("FINAL", "how it phrases the final reply"),
+    ("MECH", "how it reads people's motivation & emotion",
+     "read for what they're avoiding, not just what they say"),
+    ("EMPA", "how it empathizes",
+     "name the feeling in one plain line, don't pad it"),
+    ("RESP", "how it responds in the moment",
+     "respond like a calm friend, never a therapist"),
+    ("FINAL", "how it phrases the final reply",
+     "three short sentences, end on one real question"),
 ]
 
 
@@ -238,8 +296,8 @@ def _guided_new():
         print("\n  Optional — give it a custom voice on a few key blocks.")
         print("  Type one plain-language instruction per block, or press Enter to skip.\n")
         block_prompts = {}
-        for code, gloss in _VOICE_BLOCKS:
-            line = input(f"  {code} — {gloss}:\n    > ").strip()
+        for code, gloss, example in _VOICE_BLOCKS:
+            line = input(f"  {code} — {gloss}:\n    (e.g. {example})\n    > ").strip()
             if line:
                 block_prompts[code] = line
 
@@ -468,7 +526,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="eer", description="Empathic Engine Researcher")
     sub = p.add_subparsers(dest="cmd")
 
-    sub.add_parser("blocks").set_defaults(func=cmd_blocks)
+    _blocks = sub.add_parser("blocks")
+    _blocks.add_argument("-v", "--verbose", action="store_true",
+                         help="show each block's version, reads/writes, and the instruction it runs")
+    _blocks.set_defaults(func=cmd_blocks)
     sub.add_parser("graphs").set_defaults(func=cmd_graphs)
     sub.add_parser("personalities").set_defaults(func=cmd_personalities)
 
