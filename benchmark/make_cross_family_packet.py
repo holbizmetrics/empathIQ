@@ -58,10 +58,12 @@ AXES = [
 ]
 
 
-def gather_outputs(results_dir: str = RESULTS) -> dict:
-    """Latest stored record per (category_n, variant) from the real battery JSONLs."""
+def gather_outputs(results_dir: str = RESULTS, pattern: str = "*-real.jsonl") -> dict:
+    """Latest stored record per (category_n, variant) from the battery JSONLs.
+    Default reads only real (judge-worthy) outputs; pass pattern='*-mock.jsonl' to
+    dry-run the full pipeline shape without spending real model calls."""
     recs: dict[tuple[int, str], dict] = {}
-    for f in sorted(glob.glob(os.path.join(results_dir, "*-real.jsonl"))):
+    for f in sorted(glob.glob(os.path.join(results_dir, pattern))):
         for line in open(f, encoding="utf-8"):
             line = line.strip()
             if not line:
@@ -154,9 +156,14 @@ def main(argv=None) -> int:
                     help="the baseline/ablated arm (default D_first_order_only)")
     ap.add_argument("--seed", type=int, default=20260628, help="blinding seed (recorded in the key)")
     ap.add_argument("--results-dir", default=RESULTS)
+    ap.add_argument("--glob", default="*-real.jsonl",
+                    help="which results to read (default real only; '*-mock.jsonl' = dry-run shape)")
     a = ap.parse_args(argv)
 
-    cats = pivot(gather_outputs(a.results_dir), load_prompts())
+    if "mock" in a.glob:
+        print("NOTE: building from MOCK outputs -- placeholder text, NOT for a real judge. "
+              "This is a wiring dry-run only.", file=sys.stderr)
+    cats = pivot(gather_outputs(a.results_dir, a.glob), load_prompts())
     md, key, skipped = build_packet(cats, a.on, a.baseline, a.seed)
     scored = len(key["categories"])
     if scored == 0:
