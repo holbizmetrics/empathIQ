@@ -151,6 +151,31 @@ To avoid circularity (an empathy-laden judge rewarding "agrees with our ethics")
 moral-courage dimension is anchored on **human-rated exemplars**, not on the judge model's
 unaided preference.
 
+## Known limitations (v0.1 — the instrument, not the result)
+
+v0.1 releases a *validated measuring instrument*, not a proven claim. Honestly, that means:
+
+1. **No external result yet.** The headline cross-family blind-judge run has not been run.
+   Every on-vs-baseline number you can produce today is same-family and/or self-scored —
+   useful for debugging the instrument, never a verdict on the thesis. The thesis is
+   **deferred, not dropped**: the result is the next milestone, not this tag.
+2. **The moral-courage dimension (C10) is not yet human-ratified.** Its anchors are drafted but
+   await blind rating by someone other than the architect. Until then, C10 scores are provisional.
+3. **Ablation deltas are order-confounded.** Blocks read wildcards (`$.analysis.*`, …), so a
+   block's output depends on *execution order*, not only its declared wiring — and removing a
+   block tangles its direct contribution with its footprint on every downstream wildcard reader.
+   The fix (tighten reads to specific keys) *changes outputs* and needs full re-validation, so it
+   is **explicitly deferred and documented**, not silently shipped. Read single-block isolation
+   (`only_<X>`) deltas with this confound in mind.
+4. **The noise band does not yet cover generation variance.** `benchmark/score_variance.py` puts
+   a bootstrap 95% CI + effect size on the delta (so a result reads REAL vs INDISTINGUISHABLE
+   FROM NOISE instead of a bare number), but over a *fixed* set of stored replies — it captures
+   judge-reading noise + across-category spread, not the architecture's run-to-run variation in
+   what it generates. Re-run the battery K times and pool to fold that in.
+
+None of these block *using* the instrument — they bound what you may *conclude* from it. That
+boundary is the whole design: trust the rig before you trust a number.
+
 ## Layout
 
 ```

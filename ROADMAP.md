@@ -60,7 +60,28 @@ Do not run the judge until **all four** hold:
 | — | The run — FVPA as first submission, on vs. baseline | ☐ owed (the climax) |
 | — | Analysis + honest write-up (null included) | ☐ owed |
 
-**Honest read:** the instrument is rich, usable, and now talks. The **measurement is
+**Status update — 2026-06-29 (Day 13 -> 14, instrument-only v0.1 prep):** the table above
+lagged the commits. Real state:
+- Flip-gate **criterion #1 CLOSED + validated** — `cli._variant_overrides` unions the
+  {INPUT,FINAL} scaffold into `only_<X>`; `forge/ablate.py --validate` asserts every
+  no_/only_ path emits (15 removal + 14 isolation paths, none empty, exit 0). (commit 6013802)
+- Flip-gate **criterion #2 noise-band instrument BUILT** — `benchmark/ci.py` +
+  `score_variance.py` put a bootstrap 95% CI + effect size on the delta, so a result reads
+  REAL vs INDISTINGUISHABLE-FROM-NOISE instead of a bare number. (commit 4c8bb03)
+- **Cross-family judge harness BUILT** — `make_cross_family_packet.py` +
+  `score_cross_family.py` + `run_cross_family.py` (blind A/B, fixed-seed key, inter-rater).
+  (commits 8f4ad0c / d6f77e9)
+- **Pre-registration STARTED** — `runs/PREREG-2026-06-28-mira-frame-break.md` freezes the
+  sharpest prediction (item 8, git-timestamped). (commit 17ab0c4)
+- Flip-gate **criterion #4** (order-dependent wildcard reads) -> being **explicitly accepted +
+  documented** as a known v0.1 limitation (fixing it changes outputs + needs re-validation).
+- Flip-gate **criterion #3** (human anchor ratification) + **the cross-family run** = the real
+  remaining work, deferred past v0.1 BY DESIGN (the result is v1.0, not v0.1).
+
+**v0.1 scope = the validated INSTRUMENT, not the result** — MIT-licensed, honestly scoped.
+The cross-family judge run is the post-sprint headline, not the tag.
+
+**Honest read (pre-Day-13, retained for history):** the instrument is rich, usable, and now talks. The **measurement is
 unbuilt.** Days 8–9 moved usability hard and the flip-gate not at all; criterion #1 has
 its first finding (`only_<block>` drops FINAL → emits nothing, needs INPUT+FINAL kept in).
 
