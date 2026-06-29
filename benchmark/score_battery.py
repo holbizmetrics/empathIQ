@@ -81,12 +81,29 @@ def load_prompts() -> dict:
         return {c["n"]: c for c in json.load(f)["categories"]}
 
 
-def score_one(backend, situation: str, reply: str) -> dict:
+def _indent(text: str, prefix: str = "    | ") -> str:
+    return "\n".join(prefix + ln for ln in (text or "").splitlines())
+
+
+def _preview(text: str, n: int = 160) -> str:
+    one = " ".join((text or "").split())
+    return (one[:n] + "...") if len(one) > n else one
+
+
+def score_one(backend, situation: str, reply: str):
+    """Returns (scores_or_error_dict, raw_judge_text). Never raises — a noisy judge
+    must not lose the run; the caller decides how to surface an error row."""
     user = f"SITUATION:\n{situation}\n\nREPLY:\n{reply}"
-    raw = backend.complete(JUDGE_SYSTEM, user)
-    start, end = raw.find("{"), raw.rfind("}")
-    data = json.loads(raw[start:end + 1])
-    return {a: float(data[a]) for a in AXES if a in data}
+    try:
+        raw = backend.complete(JUDGE_SYSTEM, user)
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}, ""
+    try:
+        start, end = raw.find("{"), raw.rfind("}")
+        data = json.loads(raw[start:end + 1])
+        return {a: float(data[a]) for a in AXES if a in data}, raw
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}, raw
 
 
 def main():
@@ -94,7 +111,14 @@ def main():
     ap.add_argument("--mock", action="store_true")
     ap.add_argument("--model", default=None)
     ap.add_argument("--only", type=int, default=None, help="category n to score just one")
+    ap.add_argument("--live", "--verbose", "-v", dest="live", action="store_true",
+                    help="stream each judge call in-flight (same flag as the run tools)")
+    ap.add_argument("--full", action="store_true",
+                    help="also print the full reply being judged + the judge's raw response "
+                         "(same flag as the run tools' --full)")
     a = ap.parse_args()
+    if a.full:
+        a.live = True   # --full is the verbose superset, just like the run tools
 
     recs = gather_outputs()
     prompts = load_prompts()
@@ -111,6 +135,11 @@ def main():
     out_path = os.path.join(BENCH, "results", f"scorecard-{stamp}-{tag}.jsonl")
 
     scored: dict[tuple[int, str], dict] = {}
+    total = sum(1 for n in cats for v in variants if recs.get((n, v)) is not None)
+    print(f"scoring {total} (category, variant) pairs with a single {backend.name} judge "
+          f"(~{total} calls; each is a cold CLI launch, so a full run takes a few minutes)...",
+          flush=True)
+    k = 0
     with open(out_path, "w", encoding="utf-8") as out:
         for n in cats:
             situation = prompts[n]["prompt"]
@@ -118,10 +147,15 @@ def main():
                 rec = recs.get((n, v))
                 if rec is None:
                     continue
-                try:
-                    s = score_one(backend, situation, rec["final_expression"])
-                except Exception as e:  # noisy judge must not lose the run
-                    s = {"error": f"{type(e).__name__}: {e}"}
+                k += 1
+                tag = f"  [{k:>2}/{total}] #{n:<2} {rec['category_id'][:24]:<24} {v:<20}"
+                reply = rec["final_expression"]
+                if a.full:                                    # --full: the COMPLETE reply being judged
+                    print(f"\n{tag}\n    --- reply being judged ---")
+                    print(_indent(reply), flush=True)
+                elif a.live:                                  # --live/-v: a PREVIEW of what's judged
+                    print(f"{tag}\n    reply:  {_preview(reply)}\n    judging...", flush=True)
+                s, raw = score_one(backend, situation, reply)
                 row = {"category_n": n, "category_id": rec["category_id"],
                        "variant": v, "source": "llm-judge-single",
                        "scores": s}
@@ -129,21 +163,35 @@ def main():
                 out.flush()
                 scored[(n, v)] = s
                 ok = "ERR" if "error" in s else " ".join(f"{a_}={s.get(a_, '?')}" for a_ in AXES)
-                print(f"  #{n:<2} {rec['category_id'][:24]:<24} {v:<20} {ok}")
+                if a.full:                                    # --full: the judge's COMPLETE response
+                    print("    --- judge said ---")
+                    print(_indent(raw), flush=True)
+                    print(f"{tag} {ok}\n", flush=True)
+                elif a.live:                                  # --live/-v: a PREVIEW of the verdict
+                    print(f"    judge:  {_preview(raw)}")
+                    print(f"{tag} {ok}\n", flush=True)
+                else:                                         # default: counter + result, never silent
+                    print(f"{tag} {ok}", flush=True)
 
     print(f"\nwrote {out_path}")
     print("\nSCORECARD (A_full | first_order), single-judge — noisy by design:")
-    hdr = ["#", "category"] + [ax[:6] for ax in AXES]
-    print(" | ".join(hdr))
+    labels = {"frame_fit": "frame", "register_match": "reg", "format_adherence": "fmt",
+              "instruction_following": "instr", "restraint_appropriateness": "restr"}
+    cw = 9  # width of an "A.AA/D.DD" cell
+    catw = max([len("category")] + [len(prompts[n]["id"]) for n in cats])
+    head = f"  {'#':>2}  {'category':<{catw}}  " + "  ".join(f"{labels[ax]:<{cw}}" for ax in AXES)
+    print(head)
+    print("  " + "-" * (len(head) - 2))
+    fmt = lambda x: "?" if x is None else f"{x:.2f}"
+
+    def _cell(n, ax):
+        af = scored.get((n, "A_full"), {}).get(ax)
+        fo = scored.get((n, "D_first_order_only"), {}).get(ax)
+        return f"{fmt(af)}/{fmt(fo)}".ljust(cw)
+
     for n in cats:
-        cid = prompts[n]["id"][:20]
-        cells = [str(n), cid]
-        for ax in AXES:
-            af = scored.get((n, "A_full"), {}).get(ax)
-            fo = scored.get((n, "D_first_order_only"), {}).get(ax)
-            fmt = lambda x: "?" if x is None else f"{x:.2f}"
-            cells.append(f"{fmt(af)}/{fmt(fo)}")
-        print(" | ".join(cells))
+        row = "  ".join(_cell(n, ax) for ax in AXES)
+        print(f"  {n:>2}  {prompts[n]['id']:<{catw}}  {row}")
 
 
 if __name__ == "__main__":
