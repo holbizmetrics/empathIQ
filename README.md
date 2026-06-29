@@ -6,6 +6,33 @@
 
 ---
 
+## Quickstart
+
+Python 3 + the [`claude` CLI](https://docs.claude.com/en/docs/claude-code) — **no API key.**
+Everything below is offline (`--mock`), so it runs instantly with no model calls:
+
+```bash
+git clone https://github.com/holbizmetrics/empathIQ && cd empathIQ
+
+# 1. prove it runs — one bounded-empathic reply (fake text, ~2s)
+python empathiq.py run --personality sol --input "I keep starting things and not finishing" --mock
+
+# 2. the ablation — full architecture vs. empathy-removed vs. first-order-only
+python empathiq.py ab --personality sol --input "I keep starting and not finishing" \
+    --variants A_full,B_no_EMPA,D_first_order_only --mock
+
+# 3. the benchmark — run the 11 categories, then score them
+python benchmark/run_battery.py --mock && python benchmark/score_battery.py --mock
+
+# 4. the noise band — a result reads REAL vs INDISTINGUISHABLE-FROM-NOISE, not a bare number
+python benchmark/score_variance.py --mock
+```
+
+Drop `--mock` for real model output (still no key needed). New here and want a guided tour?
+`python benchmark/walkthrough.py`. Full reference: [`forge/README.md`](forge/README.md).
+
+---
+
 ## Try it now
 
 You need Python 3 and the [`claude` CLI](https://docs.claude.com/en/docs/claude-code) — **no API key, no setup.** From this folder:

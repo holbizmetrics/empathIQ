@@ -63,7 +63,11 @@ More:
   python {prog} chat -h         chat with a personality (--demo plays a sample)
   python {prog} -h              full argument help
 
-Test over the empathy categories, then score it:  see benchmark/README.md
+Run the benchmark (the actual product — it scores architectures, all offline with --mock):
+  python benchmark/run_battery.py --mock      collect outputs across the 11 categories
+  python benchmark/score_battery.py --mock    judged scorecard over them
+  python benchmark/score_variance.py --mock   confidence interval on the delta (REAL vs noise)
+  cross-family judge + panel:                 see benchmark/README.md
 
 Swap the --input "..." for any situation. Full guide: forge/README.md
 """
