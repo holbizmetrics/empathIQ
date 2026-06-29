@@ -27,6 +27,15 @@ python benchmark/score_battery.py                       # real judge over the st
 # 3. PANEL — three variant-blind judges with different framings, as a tie-breaker pass
 #    (neutral / depth-valuing / directness-valuing) when the single judge is ambiguous.
 python benchmark/score_panel.py                         # 3 x N judge calls
+
+# 4. CROSS-FAMILY + NOISE BAND — the headline path (an external judge, with a CI).
+#    Build a blind, randomized packet to hand a NON-Claude judge, de-blind it, and put a
+#    confidence interval on the delta so a result reads REAL vs INDISTINGUISHABLE-FROM-NOISE.
+python benchmark/make_cross_family_packet.py --on A_full --baseline D_first_order_only
+#    -> writes a packet (hand to the outside judge) + a sealed, git-ignored key
+python benchmark/score_cross_family.py                  # de-blind -> on-minus-baseline delta + inter-rater
+python benchmark/score_variance.py --runs 5             # bootstrap 95% CI + effect size on the delta
+python benchmark/score_variance.py --mock               # offline synthetic-judge dry-run (shows the shape)
 ```
 
 `run_battery.py` defaults to the public demo persona **`sol`**. Real runs are many
@@ -55,9 +64,10 @@ are **never published** — publishing them would let a submitter game the bench
 
 - **C10 (moral-courage) anchor exemplars** and the **cross-family judge key** — the
   scorers read these from local files at scoring time; they are not in this public repo.
-- **Cross-family model-robustness validation** (running the same outputs through a
-  non-Claude judge to test whether an effect is model-robust or a same-family artifact)
-  is a **research pass**, run in the lab, not part of the shipped harness.
+- The **cross-family judge RUN itself** — the *tooling* ships (step 4: packet builder, the
+  de-blinding scorer, the CI), but the actual scoring by a non-Claude model is run by the
+  operator, against the held-out key. The shipped harness lets you *build the packet and
+  score a returned one*; it does not bundle a non-Claude model.
 
-So this repo lets you *run and score* the benchmark; the held-out keys stay operator-side
-by design.
+So this repo lets you *run and score* the benchmark; the held-out key + the external judge
+run stay operator-side by design.
