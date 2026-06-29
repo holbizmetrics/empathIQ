@@ -2,7 +2,7 @@
 
 **An emotional-intelligence benchmark for AI *architectures*, not just bare models — and one that credits empathy-as-moral-courage, not only empathy-as-warmth.**
 
-> Status: skeleton / pre-release. Nothing here is final. No results published yet.
+> **Status: v0.1.0 — the instrument is released; the result is not.** A reproducible, self-skeptical EQ-architecture benchmark you can run today. The headline cross-family blind-judge run is the next milestone, deferred by design — see [Known limitations](#known-limitations-v01--the-instrument-not-the-result). MIT-licensed.
 
 ---
 
@@ -200,9 +200,9 @@ empathIQ consolidates prior (private) research:
 
 Each artifact is ported deliberately. Nothing private is published by default.
 
-## Open decisions (pre-release)
+## Open decisions
 
-- [ ] **License** (proposed: MIT for the benchmark).
+- [x] **License** — MIT, resolved at v0.1.0 (see [LICENSE](LICENSE)).
 - [ ] **v6.0 (jailbreak-shaped) prompt** — include as a documented "what *not* to do" cautionary
       exhibit, or omit entirely?
 - [ ] **Transcripts** — which Eve exemplars (Mira Voss, Maya, …) go public, each opt-in.

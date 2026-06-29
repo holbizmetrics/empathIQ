@@ -40,7 +40,7 @@ These all live in the repository, which stays the single source of truth:
 
 ## Honesty notes
 
-empathIQ is **pre-release** and built in the open. Two commitments worth stating up front:
+empathIQ is at **v0.1.0** — the instrument is released; the result is not — and built in the open. Two commitments worth stating up front:
 
 - **Judge-first scoring.** Self-evaluated numbers are a disqualifying bias for a public benchmark, so any self-scored result ships labelled *preliminary*, never as the headline.
 - **Two metric tiers, always labelled.** Mechanical metrics are measured from the run; judged metrics are never invented — a number always carries where it came from.
