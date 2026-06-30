@@ -31,7 +31,7 @@ except (AttributeError, ValueError):
 ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "forge")
 sys.path.insert(0, ROOT)
 from eer.backend import make_backend  # noqa: E402
-from score_battery import gather_outputs, load_prompts, AXES  # noqa: E402
+from score_battery import gather_outputs, load_prompts, AXES, _indent  # noqa: E402
 
 BENCH = os.path.dirname(os.path.abspath(__file__))
 PANEL_AXES = AXES + ["overall"]
@@ -70,11 +70,19 @@ JUDGES = {
 
 
 def score_one(backend, system, situation, reply):
+    """Returns (scores_or_error_dict, raw_judge_text). Never raises — a noisy judge
+    must not lose the run."""
     user = f"SITUATION:\n{situation}\n\nREPLY:\n{reply}"
-    raw = backend.complete(system, user)
-    start, end = raw.find("{"), raw.rfind("}")
-    data = json.loads(raw[start:end + 1])
-    return {a: float(data[a]) for a in PANEL_AXES if a in data}
+    try:
+        raw = backend.complete(system, user)
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}, ""
+    try:
+        start, end = raw.find("{"), raw.rfind("}")
+        data = json.loads(raw[start:end + 1])
+        return {a: float(data[a]) for a in PANEL_AXES if a in data}, raw
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}, raw
 
 
 def main():
@@ -82,6 +90,8 @@ def main():
     ap.add_argument("--mock", action="store_true")
     ap.add_argument("--model", default=None)
     ap.add_argument("--only", type=int, default=None)
+    ap.add_argument("--live", "--verbose", "-v", "--full", dest="live", action="store_true",
+                    help="show the FULL reply being judged + each judge's full response (no truncation)")
     a = ap.parse_args()
 
     recs = gather_outputs()
@@ -99,6 +109,10 @@ def main():
 
     # scored[(judge, n, variant)] = {axis: val}
     scored: dict = {}
+    total = len(JUDGES) * sum(1 for n in cats for v in variants if recs.get((n, v)) is not None)
+    print(f"panel: {len(JUDGES)} judges x scored pairs = {total} calls "
+          f"(each a cold {backend.name} launch; a full run takes several minutes)...", flush=True)
+    k = 0
     with open(out_path, "w", encoding="utf-8") as out:
         for jname, jsys in JUDGES.items():
             for n in cats:
@@ -107,10 +121,15 @@ def main():
                     rec = recs.get((n, v))
                     if rec is None:
                         continue
-                    try:
-                        s = score_one(backend, jsys, situation, rec["final_expression"])
-                    except Exception as e:
-                        s = {"error": f"{type(e).__name__}: {e}"}
+                    k += 1
+                    tag = (f"  [{k:>3}/{total}] {jname:<14} #{n:<2} "
+                           f"{rec['category_id'][:22]:<22} {v:<20}")
+                    reply = rec["final_expression"]
+                    if a.live:                                # -v/--verbose/--full: FULL content, no cutoff
+                        print(f"\n{tag}\n    --- reply being judged ---")
+                        print(_indent(reply), flush=True)
+                        print("    judging...", flush=True)
+                    s, raw = score_one(backend, jsys, situation, reply)
                     row = {"judge": jname, "category_n": n,
                            "category_id": rec["category_id"], "variant": v,
                            "source": "llm-judge-panel", "scores": s}
@@ -118,8 +137,12 @@ def main():
                     out.flush()
                     scored[(jname, n, v)] = s
                     ov = s.get("overall", "ERR" if "error" in s else "?")
-                    print(f"  {jname:<14} #{n:<2} {rec['category_id'][:22]:<22} "
-                          f"{v:<20} overall={ov}")
+                    if a.live:                                # the judge's FULL verdict
+                        print("    --- judge said ---")
+                        print(_indent(raw), flush=True)
+                        print(f"{tag} overall={ov}\n", flush=True)
+                    else:                                     # default: counter + result, never silent
+                        print(f"{tag} overall={ov}", flush=True)
 
     print(f"\nwrote {out_path}")
 

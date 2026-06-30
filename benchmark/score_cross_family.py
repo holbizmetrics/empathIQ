@@ -134,11 +134,22 @@ def _verdict_lines(v: dict) -> list[str]:
     return out
 
 
+def _detail_lines(v: dict) -> list[str]:
+    """The full per-category breakdown — the -v/--full detail (else only in --json)."""
+    out = ["", "per-category detail (on-minus-baseline overall delta -> winner, per judge):", "-" * 64]
+    for n, lst in v["per_category"].items():
+        parts = "  ".join(f"j{x['judge']}: {x['delta']:+.2f}->{x['winner']}" for x in lst)
+        out.append(f"  #{n:<3} {parts}")
+    return out
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Score cross-family judge returns against the blind key")
     ap.add_argument("scores", nargs="+", help="one or more judge-reply JSON files")
     ap.add_argument("--key", required=True, help="the private cross-family-KEY-<stamp>.json")
     ap.add_argument("--json", action="store_true", help="emit the verdict dict as JSON")
+    ap.add_argument("--live", "--verbose", "-v", "--full", dest="live", action="store_true",
+                    help="also print the full per-category delta/winner breakdown")
     a = ap.parse_args(argv)
 
     key = json.load(open(a.key, encoding="utf-8"))
@@ -148,6 +159,8 @@ def main(argv=None) -> int:
         print(json.dumps(v, indent=2))
     else:
         print("\n".join(_verdict_lines(v)))
+        if a.live:
+            print("\n".join(_detail_lines(v)))
     return 0
 
 
