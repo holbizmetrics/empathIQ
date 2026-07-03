@@ -60,9 +60,15 @@ JUDGE_SYSTEM = (
 )
 
 
-def gather_outputs() -> dict:
-    """Latest stored record per (category_n, variant)."""
+def gather_outputs(personality: str | None = None) -> dict:
+    """Latest stored record per (category_n, variant), optionally filtered to one
+    personality. REFUSES a mixed-personality store when no filter is given: runs of
+    different personalities sharing a variant name (Sol A_full vs Sol-FA A_full) would
+    silently alias into one arm, latest-wins — a scored delta would then compare
+    across personalities without saying so. score_panel and score_variance import this,
+    so the refusal guards all three scorers."""
     recs: dict[tuple[int, str], dict] = {}
+    seen: set[str] = set()
     files = sorted(glob.glob(os.path.join(BENCH, "results", "*-real.jsonl")))
     for f in files:  # sorted ascending → later files overwrite earlier (keep latest)
         for line in open(f, encoding="utf-8"):
@@ -72,7 +78,15 @@ def gather_outputs() -> dict:
             d = json.loads(line)
             if "final_expression" not in d:
                 continue
+            if personality and d.get("personality") != personality:
+                continue
+            seen.add(d.get("personality", "?"))
             recs[(d["category_n"], d["variant"])] = d
+    if personality is None and len(seen) > 1:
+        raise SystemExit(
+            f"REFUSING to score: stored real outputs mix personalities {sorted(seen)} -- "
+            f"same-named variants would silently alias into one arm (latest-wins). "
+            f"Pass --personality <name> to pick whose runs to score.")
     return recs
 
 
@@ -106,12 +120,15 @@ def main():
     ap.add_argument("--mock", action="store_true")
     ap.add_argument("--model", default=None)
     ap.add_argument("--only", type=int, default=None, help="category n to score just one")
+    ap.add_argument("--personality", default=None,
+                    help="score only this personality's runs (required when the results "
+                         "store mixes personalities)")
     ap.add_argument("--live", "--verbose", "-v", "--full", dest="live", action="store_true",
                     help="show the FULL reply being judged + the judge's full response, per item "
                          "(no truncation)")
     a = ap.parse_args()
 
-    recs = gather_outputs()
+    recs = gather_outputs(a.personality)
     prompts = load_prompts()
     backend = make_backend("mock" if a.mock else "claude", model=a.model)
 

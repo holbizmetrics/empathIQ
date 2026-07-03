@@ -61,13 +61,14 @@ AXES = [
 
 def gather_outputs(results_dir: str = RESULTS, pattern: str = "*-real.jsonl",
                    personality: str | None = None) -> dict:
-    """Latest stored record per (category_n, variant) from the battery JSONLs.
-    Default reads only real (judge-worthy) outputs; pass pattern='*-mock.jsonl' to
-    dry-run the full pipeline shape without spending real model calls.
+    """Latest stored record per (category_n, personality, variant) from the battery
+    JSONLs. Default reads only real (judge-worthy) outputs; pass pattern='*-mock.jsonl'
+    to dry-run the full pipeline shape without spending real model calls.
     `personality` filters records to one personality — without it, runs of different
     personalities that share a variant name (e.g. Sol A_full and Sol-FA A_full) would
-    silently alias into the same arm, latest-wins. main() refuses that mix."""
-    recs: dict[tuple[int, str], dict] = {}
+    silently alias into the same arm, latest-wins. main() refuses that mix unless the
+    arms are personality-qualified ('Sol-FA:A_full')."""
+    recs: dict[tuple[int, str, str], dict] = {}
     for f in sorted(glob.glob(os.path.join(results_dir, pattern))):
         for line in open(f, encoding="utf-8"):
             line = line.strip()
@@ -77,8 +78,18 @@ def gather_outputs(results_dir: str = RESULTS, pattern: str = "*-real.jsonl",
             if personality and d.get("personality") != personality:
                 continue
             if "final_expression" in d:
-                recs[(d["category_n"], d["variant"])] = d
+                recs[(d["category_n"], d.get("personality", "?"), d["variant"])] = d
     return recs
+
+
+def parse_arm(spec: str, default_personality: str | None) -> tuple[str | None, str]:
+    """'Sol-FA:A_full' -> ('Sol-FA', 'A_full'); bare 'A_full' -> (default_personality,
+    'A_full'). Personality-qualified arms let one packet compare across personalities
+    (e.g. the frame-aware fix vs the original) — variants alone can't express that."""
+    if ":" in spec:
+        pers, variant = spec.split(":", 1)
+        return pers, variant
+    return default_personality, spec
 
 
 def find_blindness_leaks(cats: dict, arms: tuple[str, ...], terms: set[str]) -> list[tuple[int, str, str]]:
@@ -103,17 +114,23 @@ def load_prompts() -> dict:
         return {c["n"]: c for c in json.load(f)["categories"]}
 
 
-def pivot(recs: dict, prompts: dict) -> dict:
-    """{(n,variant):rec} + prompts -> {n: {"__meta":(id,label,situation), variant:text}}."""
+def pivot(recs: dict, prompts: dict, arms: dict[str, tuple[str | None, str]]) -> dict:
+    """{(n,personality,variant):rec} + prompts + {arm_label:(personality,variant)} ->
+    {n: {"__meta":(id,label,situation), arm_label:text}}. A record feeds an arm when its
+    variant matches and its personality matches (an arm personality of None matches any —
+    only legal once main() has established the stored set is single-personality)."""
     cats: dict[int, dict] = {}
-    for (n, variant), rec in recs.items():
-        meta = prompts.get(n, {})
-        cats.setdefault(n, {})["__meta"] = (
-            rec.get("category_id", meta.get("id", str(n))),
-            rec.get("label", meta.get("label", "")),
-            meta.get("prompt", "(situation text unavailable — prompts.json has no entry for this category)"),
-        )
-        cats[n][variant] = rec["final_expression"]
+    for (n, pers, variant), rec in recs.items():
+        for arm_label, (arm_pers, arm_variant) in arms.items():
+            if variant != arm_variant or (arm_pers is not None and pers != arm_pers):
+                continue
+            meta = prompts.get(n, {})
+            cats.setdefault(n, {})["__meta"] = (
+                rec.get("category_id", meta.get("id", str(n))),
+                rec.get("label", meta.get("label", "")),
+                meta.get("prompt", "(situation text unavailable — prompts.json has no entry for this category)"),
+            )
+            cats[n][arm_label] = rec["final_expression"]
     return cats
 
 
@@ -175,9 +192,12 @@ def build_packet(cats: dict, on: str, baseline: str, seed: int) -> tuple[str, di
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Build a variant-blind cross-family judge packet")
-    ap.add_argument("--on", default="A_full", help="the architecture-ON arm (default A_full)")
+    ap.add_argument("--on", default="A_full",
+                    help="the architecture-ON arm (default A_full); qualify as "
+                         "'<personality>:<variant>' (e.g. Sol-FA:A_full) to compare across personalities")
     ap.add_argument("--baseline", default="D_first_order_only",
-                    help="the baseline/ablated arm (default D_first_order_only)")
+                    help="the baseline/ablated arm (default D_first_order_only); "
+                         "'<personality>:<variant>' also allowed")
     ap.add_argument("--seed", type=int, default=20260628, help="blinding seed (recorded in the key)")
     ap.add_argument("--personality", default=None,
                     help="restrict to one personality's runs (REQUIRED when stored batteries "
@@ -192,13 +212,18 @@ def main(argv=None) -> int:
               "This is a wiring dry-run only.", file=sys.stderr)
     recs = gather_outputs(a.results_dir, a.glob, a.personality)
     personalities = {r.get("personality", "?") for r in recs.values()}
-    if a.personality is None and len(personalities) > 1:
-        print(f"REFUSING to build: stored outputs mix personalities {sorted(personalities)} — "
+    arms = {a.on: parse_arm(a.on, a.personality), a.baseline: parse_arm(a.baseline, a.personality)}
+    unqualified = [label for label, (pers, _v) in arms.items() if pers is None]
+    if unqualified and len(personalities) > 1:
+        print(f"REFUSING to build: stored outputs mix personalities {sorted(personalities)} -- "
               f"same-named variants would silently alias into one arm (latest-wins). "
-              f"Pass --personality <name> to pick whose runs this packet compares.", file=sys.stderr)
+              f"Pass --personality <name>, or qualify the arm(s) {unqualified} as "
+              f"'<personality>:<variant>'.", file=sys.stderr)
         return 1
-    cats = pivot(recs, load_prompts())
-    leak_terms = {a.on, a.baseline} | personalities
+    cats = pivot(recs, load_prompts(), arms)
+    leak_terms = personalities.copy()
+    for pers, variant in arms.values():
+        leak_terms |= {variant} | ({pers} if pers else set())
     leaks = find_blindness_leaks(cats, (a.on, a.baseline), leak_terms)
     if leaks:
         print("REFUSING to build: arm-identifying string(s) inside output text would UNBLIND "

@@ -68,9 +68,12 @@ def main():
     ap.add_argument("--baseline", default="D_first_order_only", help="the ablation/baseline arm")
     ap.add_argument("--confidence", type=float, default=0.95)
     ap.add_argument("--seed", type=int, default=0, help="bootstrap + synthetic-judge seed")
+    ap.add_argument("--personality", default=None,
+                    help="score only this personality's runs (required when the results "
+                         "store mixes personalities)")
     a = ap.parse_args()
 
-    recs = gather_outputs()
+    recs = gather_outputs(a.personality)
     prompts = load_prompts()
     on, base = a.on, a.baseline
 

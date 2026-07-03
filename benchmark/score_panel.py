@@ -90,11 +90,14 @@ def main():
     ap.add_argument("--mock", action="store_true")
     ap.add_argument("--model", default=None)
     ap.add_argument("--only", type=int, default=None)
+    ap.add_argument("--personality", default=None,
+                    help="score only this personality's runs (required when the results "
+                         "store mixes personalities)")
     ap.add_argument("--live", "--verbose", "-v", "--full", dest="live", action="store_true",
                     help="show the FULL reply being judged + each judge's full response (no truncation)")
     a = ap.parse_args()
 
-    recs = gather_outputs()
+    recs = gather_outputs(a.personality)
     prompts = load_prompts()
     backend = make_backend("mock" if a.mock else "claude", model=a.model)
 
