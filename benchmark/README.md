@@ -33,6 +33,9 @@ python benchmark/score_panel.py                         # 3 x N judge calls
 #    confidence interval on the delta so a result reads REAL vs INDISTINGUISHABLE-FROM-NOISE.
 python benchmark/make_cross_family_packet.py --on A_full --baseline D_first_order_only
 #    -> writes a packet (hand to the outside judge) + a sealed, git-ignored key
+#    Add --personality <name> when stored batteries mix personalities (it refuses the silent
+#    alias otherwise), and it refuses to build if any output text would unblind the judge
+#    (arm/personality name leaked inside a reply).
 python benchmark/score_cross_family.py                  # de-blind -> on-minus-baseline delta + inter-rater
 python benchmark/score_variance.py --runs 5             # bootstrap 95% CI + effect size on the delta
 python benchmark/score_variance.py --mock               # offline synthetic-judge dry-run (shows the shape)

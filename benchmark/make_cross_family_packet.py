@@ -37,6 +37,7 @@ import glob
 import json
 import os
 import random
+import re
 import sys
 
 try:  # Windows cp1252 stdout crashes on em-dashes/smart quotes in long packets
@@ -58,10 +59,14 @@ AXES = [
 ]
 
 
-def gather_outputs(results_dir: str = RESULTS, pattern: str = "*-real.jsonl") -> dict:
+def gather_outputs(results_dir: str = RESULTS, pattern: str = "*-real.jsonl",
+                   personality: str | None = None) -> dict:
     """Latest stored record per (category_n, variant) from the battery JSONLs.
     Default reads only real (judge-worthy) outputs; pass pattern='*-mock.jsonl' to
-    dry-run the full pipeline shape without spending real model calls."""
+    dry-run the full pipeline shape without spending real model calls.
+    `personality` filters records to one personality — without it, runs of different
+    personalities that share a variant name (e.g. Sol A_full and Sol-FA A_full) would
+    silently alias into the same arm, latest-wins. main() refuses that mix."""
     recs: dict[tuple[int, str], dict] = {}
     for f in sorted(glob.glob(os.path.join(results_dir, pattern))):
         for line in open(f, encoding="utf-8"):
@@ -69,9 +74,28 @@ def gather_outputs(results_dir: str = RESULTS, pattern: str = "*-real.jsonl") ->
             if not line:
                 continue
             d = json.loads(line)
+            if personality and d.get("personality") != personality:
+                continue
             if "final_expression" in d:
                 recs[(d["category_n"], d["variant"])] = d
     return recs
+
+
+def find_blindness_leaks(cats: dict, arms: tuple[str, ...], terms: set[str]) -> list[tuple[int, str, str]]:
+    """Scan the output texts that would enter the packet for arm-identifying strings
+    (variant names, personality names). A single leaked name unblinds the judge on
+    contact — refuse to build rather than ship a compromised packet. Word-boundary
+    match so 'Sol' does not fire on 'solve'/'console'."""
+    leaks: list[tuple[int, str, str]] = []
+    for n, block in cats.items():
+        for arm in arms:
+            text = block.get(arm)
+            if not text:
+                continue
+            for t in sorted(terms):
+                if t and re.search(rf"(?<!\w){re.escape(t)}(?!\w)", text, re.IGNORECASE):
+                    leaks.append((n, arm, t))
+    return leaks
 
 
 def load_prompts() -> dict:
@@ -155,6 +179,9 @@ def main(argv=None) -> int:
     ap.add_argument("--baseline", default="D_first_order_only",
                     help="the baseline/ablated arm (default D_first_order_only)")
     ap.add_argument("--seed", type=int, default=20260628, help="blinding seed (recorded in the key)")
+    ap.add_argument("--personality", default=None,
+                    help="restrict to one personality's runs (REQUIRED when stored batteries "
+                         "mix personalities — otherwise same-named variants would silently alias)")
     ap.add_argument("--results-dir", default=RESULTS)
     ap.add_argument("--glob", default="*-real.jsonl",
                     help="which results to read (default real only; '*-mock.jsonl' = dry-run shape)")
@@ -163,7 +190,23 @@ def main(argv=None) -> int:
     if "mock" in a.glob:
         print("NOTE: building from MOCK outputs -- placeholder text, NOT for a real judge. "
               "This is a wiring dry-run only.", file=sys.stderr)
-    cats = pivot(gather_outputs(a.results_dir, a.glob), load_prompts())
+    recs = gather_outputs(a.results_dir, a.glob, a.personality)
+    personalities = {r.get("personality", "?") for r in recs.values()}
+    if a.personality is None and len(personalities) > 1:
+        print(f"REFUSING to build: stored outputs mix personalities {sorted(personalities)} — "
+              f"same-named variants would silently alias into one arm (latest-wins). "
+              f"Pass --personality <name> to pick whose runs this packet compares.", file=sys.stderr)
+        return 1
+    cats = pivot(recs, load_prompts())
+    leak_terms = {a.on, a.baseline} | personalities
+    leaks = find_blindness_leaks(cats, (a.on, a.baseline), leak_terms)
+    if leaks:
+        print("REFUSING to build: arm-identifying string(s) inside output text would UNBLIND "
+              "the judge on contact:", file=sys.stderr)
+        for n, arm, term in leaks:
+            print(f"  category {n}, arm {arm}: contains {term!r}", file=sys.stderr)
+        print("Regenerate the leaking output(s), or exclude them, before packeting.", file=sys.stderr)
+        return 1
     md, key, skipped = build_packet(cats, a.on, a.baseline, a.seed)
     scored = len(key["categories"])
     if scored == 0:
