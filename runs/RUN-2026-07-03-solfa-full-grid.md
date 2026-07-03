@@ -44,6 +44,25 @@ offline against the June-29 two-pass scorecards of original Sol `A_full` and
 - **n = 1 generation per cell**; generation variance untested.
 - Frame axes, not the C1–C10 rubric.
 
+## ADDENDUM (same session, ~1h later) — same-day rescore kills the drift confound
+
+Sol `A_full` + `D` were rescored in two fresh passes the same evening
+(`scorecard-20260703T211602/212359-real.jsonl`), removing the cross-day judge confound.
+Result on the clean same-day grid:
+
+- **Sol-FA beats original A_full: 11/11, mean +0.421** (was 9/11 +0.395 against June-29 scores).
+- **Sol-FA beats D baseline: 10/11, mean +0.218** (was 8/11 +0.162).
+- Measured judge drift June-29 → today: small on average (SolA −0.026, SolD −0.056) but up to
+  ±0.34 on individual categories — the same-day rescore was worth doing; per-category
+  comparisons across scoring days are not safe even when the mean is.
+- The two apparent Sol-FA losses vs original A (repair, self-worth) **disappear** on same-day
+  scoring — they were drift artifacts. The one loss vs D that SURVIVES: `play_manic_creative`
+  (−0.23, consistent across both scoring days) — that one is real design surface: the frame
+  machinery damps manic-playful register.
+
+The effect got stronger, not weaker, when the confound was removed. Same-family boundary
+unchanged: this earns the cross-family run; it does not replace it.
+
 ## Consequence for the thesis
 
 If the cross-family judge confirms this shape, the benchmark's "architecture-on" arm should be
