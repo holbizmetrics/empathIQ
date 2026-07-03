@@ -241,8 +241,15 @@ def main(argv=None) -> int:
 
     os.makedirs(a.results_dir, exist_ok=True)
     stamp = dt.datetime.now().strftime("%Y%m%dT%H%M%S")
-    packet_path = os.path.join(a.results_dir, f"cross-family-packet-{stamp}.md")
-    key_path = os.path.join(a.results_dir, f"cross-family-KEY-{stamp}.json")
+    # seconds-granular stamps collide when two packets are built back-to-back (a second
+    # build would silently clobber the first + its key) -- suffix until free
+    suffix = ""
+    n = 1
+    while os.path.exists(os.path.join(a.results_dir, f"cross-family-packet-{stamp}{suffix}.md")):
+        n += 1
+        suffix = f"-{n}"
+    packet_path = os.path.join(a.results_dir, f"cross-family-packet-{stamp}{suffix}.md")
+    key_path = os.path.join(a.results_dir, f"cross-family-KEY-{stamp}{suffix}.json")
     with open(packet_path, "w", encoding="utf-8") as f:
         f.write(md)
     with open(key_path, "w", encoding="utf-8") as f:
