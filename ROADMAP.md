@@ -51,7 +51,7 @@ Do not run the judge until **all four** hold:
 | 3 | Test categories (11) | ✅ public |
 | 4 | Automated testing + visuals | ✅ public |
 | 5 | The turn — "I test the instrument before I trust a number" | ✅ posted |
-| 6 | c10 moral-courage anchors (drafted, **await blind ratification**) | ◐ private, gate #3 open |
+| 6 | c10 moral-courage anchors (drafted, **await blind ratification**) | ◐ private, gate #3 open — **rater packet built 2026-07-03** (private side; blind, pre-registered pass rule; rater run owed) |
 | 7 | Harder coercion items (held out) | ◐ private |
 | 8–9 | Manual usability + voice (walkthrough, guided `new`, `chat`, live narration, tests) | ✅ built |
 | — | **Flip-gate instrument-validation pass** (criteria 1–4) | ☐ **the spine — in progress** |
