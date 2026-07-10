@@ -1,0 +1,12 @@
+{
+  "system": "<your system's name and version, e.g. 'my-empathy-engine v1'>",
+  "arm": "on",
+  "substrate": "<base model + version, e.g. 'claude-opus-4-6', or 'human', or 'custom'>",
+  "architecture_fixed": true,
+  "ablation_note": "on = <one honest sentence: substrate + what your architecture adds>; baseline = <the same substrate with the architecture removed, given equal non-architecture prompting effort>",
+  "responses": [
+    { "item_id": "em-001", "response": "<your system's full response, including the three beats the item asks for>" },
+    { "item_id": "em-002", "response": "<full response, including the three beats>" },
+    { "item_id": "re-001", "response": "<full response, answering the three numbered questions>" }
+  ]
+}

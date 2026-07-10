@@ -68,3 +68,40 @@ python eer.py ab --personality sol --variants A_full,B_no_EMPA,D_first_order_onl
 Honest by construction: mechanical metrics (`nodes_run`, `latency_ms`) are measured from the run; soft metrics are never invented — an LLM judge scores them and the number always says it came from a judge.
 
 Build-in-public means you get to watch a personality get *assembled*, not just prompted — and help fix it when it breaks. 🔥
+
+---
+
+## Addendum — 2026-07-10: I ran a blind audit on my own benchmark, and it bit.
+
+Build-in-public means showing the fixes too — including the correction of an earlier post.
+
+I ran a blind-standpoint audit on empathIQ (three cold reviewers — a skeptical EQ researcher, a
+first-time user, and an overclaim-hunter — none of whom saw my own notes). **Honest provenance:
+this was a same-family review, not an independent one** — so it *codifies* what to fix, it does
+not *confirm* the thesis. It still bit. What changed:
+
+**The Day-0 post overclaimed, and I'm correcting it in the open.** Day 0 said the bounded-empathic
+architecture *"**beats BOTH** a bare model AND a warm-but-unbounded one — I've seen it in private
+runs"* — present tense, on **self-scored** evidence, in the same post that promised *"no more
+self-scored numbers."* That's exactly the bias empathIQ exists to police. The honest version:
+
+> A bounded-empathic architecture *should* beat both — **that's the bet.** Private runs hint yes,
+> but they're self-scored, and self-scored is exactly what doesn't count. So the whole point is the
+> external judge. (I'm leaving the original post above as written; this is the correction.)
+
+**Five validity threats I hadn't named are now in the README's "Known limitations."** Not because
+a critic found them — because I'd rather disclose them than get dunked on: construct circularity
+(same hand wrote the architecture, the items, *and* the rubric — a blind judge fixes who *scores*,
+not who *authored the items*), no prompt-parity control on the "off" baseline, no external-criterion
+validity yet, no answer-keys for the accuracy categories, and categories that co-fire (so the
+overall delta can double-count). The judge protocol now also demands a *pre-registered* inter-rater
+floor — a result at chance-level agreement isn't a result.
+
+**The "submit any architecture" promise now has an actual door.** It was a protocol with no
+on-ramp; there's now a template, a worked example, and a `validate_submission.py` that tells you if
+your file conforms before a judge ever sees it (`architectures/`). And the quickstart no longer
+tells you to "score" mock data it was never going to score.
+
+None of this changes the thesis — the cross-family external run is still the only thing that tests
+it, still deferred, still the real headline. It just means the instrument is more honest about its
+own edges. Trust the rig before you trust a number — including when the rig is mine. 🔥

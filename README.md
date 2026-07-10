@@ -21,15 +21,21 @@ python empathiq.py run --personality sol --input "I keep starting things and not
 python empathiq.py ab --personality sol --input "I keep starting and not finishing" \
     --variants A_full,B_no_EMPA,D_first_order_only --mock
 
-# 3. the benchmark — run the 11 categories, then score them
-python benchmark/run_battery.py --mock && python benchmark/score_battery.py --mock
+# 3. the benchmark pipeline — prove it runs end-to-end offline
+#    (mock = placeholder text, NOT scored by design — scoring needs real outputs, see step 4)
+python benchmark/run_battery.py --mock
 
-# 4. the noise band — a result reads REAL vs INDISTINGUISHABLE-FROM-NOISE, not a bare number
-python benchmark/score_variance.py --mock
+# 4. scoring + the noise band — these read REAL stored outputs, so do a real run first,
+#    then score a chosen personality (the scorer deliberately ignores --mock text):
+#      python benchmark/run_battery.py --only self_worth_under_judgm --variants A_full,D_first_order_only
+#      python benchmark/score_battery.py  --personality sol   # REAL vs baseline delta
+#      python benchmark/score_variance.py --personality sol   # REAL vs INDISTINGUISHABLE-FROM-NOISE
 ```
 
-Drop `--mock` for real model output (still no key needed). New here and want a guided tour?
-`python benchmark/walkthrough.py`. Full reference: [`forge/README.md`](forge/README.md).
+Drop `--mock` for real model output (still no API key needed — but the `claude` CLI must be
+**installed and signed in to your subscription**; "no key" ≠ "no sign-in"). The instant path is
+`--mock`; a *real* reply is ~4 min because each of the 16 blocks is its own model call. New here
+and want a guided tour? `python benchmark/walkthrough.py`. Full reference: [`forge/README.md`](forge/README.md).
 
 ---
 
@@ -199,9 +205,36 @@ v0.1 releases a *validated measuring instrument*, not a proven claim. Honestly, 
    FROM NOISE instead of a bare number), but over a *fixed* set of stored replies — it captures
    judge-reading noise + across-category spread, not the architecture's run-to-run variation in
    what it generates. Re-run the battery K times and pool to fold that in.
+5. **Construct circularity — same author owns the architecture, the items, and the C10 dimension.**
+   A blind cross-family judge fixes *who scores*, not *who wrote the items*. Items authored by the
+   same hand as the empathy block can surface exactly what that block emits and the rubric rewards,
+   so a positive on−baseline delta can be teaching-to-the-test rather than a general EQ gain. The
+   missing control is an **independently-authored, held-out item set** — a distinct axis from the
+   same-family-*judge* limitation in #1. Until then, read any delta as "lift on *these* items."
+6. **The "off" baseline is not prompt-parity-controlled.** "Architecture on vs off" is only a clean
+   test if the baseline is the substrate given an *equally engineered* single prompt, not a thinned
+   one. The submission protocol's "baseline = substrate alone" can make the delta measure
+   tuned-pipeline-vs-bare-prompt rather than the architecture's structural contribution. A fair
+   comparison needs a stated prompt-parity control (equal non-architecture prompting effort on both
+   arms); see `judge/PROTOCOL.md` and `architectures/SUBMISSION.md`.
+7. **No external-criterion (convergent) validity yet.** Nothing links an empathIQ number to an
+   outside measure — human user-satisfaction, an established psychometric EQ instrument, or the
+   real deployment outcomes this README motivates with. Absent a criterion correlation, a clean
+   result measures "agreement with this rubric," and the leap to "real-world empathy" is unbacked.
+8. **The accuracy categories have no answer key.** C1 ("correct deeper *unstated* emotion"), C6
+   (root-cause) claim to reward *correct* mind-reading, but there is no gold label for the correct
+   unstated emotion/root — the judge only decides whether the guess *sounds* right, so a fluent-but-
+   wrong read can outscore a humbler correct one. These categories need per-scenario keys.
+9. **Categories are scored as independent but co-fire; the overall delta can double-count.** C1/C6/C8
+   (attunement / therapeutic-depth / proactive-care) all fire on any warm insightful reply, so
+   averaging correlated categories inflates the aggregate — and 10 categories × arms with no
+   multiple-comparison correction leaves family-wise error unaddressed. Report an inter-category
+   correlation/factor check and correct for multiple comparisons before headlining an overall lift.
 
 None of these block *using* the instrument — they bound what you may *conclude* from it. That
-boundary is the whole design: trust the rig before you trust a number.
+boundary is the whole design: trust the rig before you trust a number. (Limitations 5–9 were
+surfaced by a blind-standpoint TRIAD audit — same-family, not an independent review — on
+2026-07-10, and disclosed here rather than left for a critic to find.)
 
 ## Layout
 

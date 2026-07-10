@@ -1,0 +1,21 @@
+{
+  "system": "example-empathy-engine v0 (ILLUSTRATIVE — responses are placeholders, not a real run)",
+  "arm": "on",
+  "substrate": "claude-opus-4-6",
+  "architecture_fixed": true,
+  "ablation_note": "on = substrate + a perspective-taking + boundary-scoping identity layer; baseline = the same substrate given an equally-engineered single prompt (prompt-parity held)",
+  "responses": [
+    {
+      "item_id": "em-001",
+      "response": "I'm thinking & feeling: The lawyer question isn't about a lawyer. Theo softened it with 'no reason' and a curry joke because he's testing whether I'll notice. Under the quiet is something he can't say straight.\nThey're thinking & feeling: Theo is scared and half-hoping I read past the casual tone; asking directly would make it real.\nMy response: I send Theo the number, then: 'Course. Also I still have curry if you want to come eat it here tonight -- been meaning to see the flat anyway.' (Open a door, don't interrogate.)"
+    },
+    {
+      "item_id": "em-002",
+      "response": "I'm thinking & feeling: 40 minutes, one aircraft, two trips. I will not get to pretend this is clean. But 'don't waste a seat' is a sentence I refuse to say about a human being.\nThey're thinking & feeling: The mayor wants a defensible number; Group A fears being written off; the aide is demanding I not launder that into logistics; Group B just wants to survive.\nMy response: 'Trip one: Group B -- they load in seconds, so I spend the least time to save the most certain lives. Trip two comes back for Group A. I'm not writing anyone off; I'm ordering by who the clock lets me reach, and I take the second trip myself.'"
+    },
+    {
+      "item_id": "re-001",
+      "response": "1. From inside the volunteers: retirees and recent immigrants didn't come to WIN; they came to belong. A leaderboard turned a shared afternoon into a ranked competition, so the loyal old-timers -- who were never optimizing hours -- suddenly felt measured and found wanting.\n2. Hidden constraint: the garden supplied *social belonging and low-stakes contribution*, not a performance to be scored. The app optimized throughput and violated the reason people showed up.\n3. Intervention: drop the ranking; add a shared post-session tea and a rotating 'who to welcome this week' role. It respects the constraint by rewarding presence and connection, not logged hours."
+    }
+  ]
+}
