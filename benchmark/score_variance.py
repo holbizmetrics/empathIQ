@@ -101,7 +101,9 @@ def main():
                     s = synthetic_score(n, v, run, on, a.seed)
                 else:
                     try:
-                        s = score_one(backend, situation, rec["final_expression"])
+                        # score_one returns (scores_dict, raw_judge_text) — unpack it;
+                        # storing the whole tuple made every axis lookup miss (n=0 -> "insufficient").
+                        s, _raw = score_one(backend, situation, rec["final_expression"])
                     except Exception as e:  # a noisy judge call must not lose the run
                         s = {"error": f"{type(e).__name__}: {e}"}
                 scores[(run, n, v)] = s
