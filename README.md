@@ -191,7 +191,9 @@ v0.1 releases a *validated measuring instrument*, not a proven claim. Honestly, 
 1. **No external result yet.** The headline cross-family blind-judge run has not been run.
    Every on-vs-baseline number you can produce today is same-family and/or self-scored —
    useful for debugging the instrument, never a verdict on the thesis. The thesis is
-   **deferred, not dropped**: the result is the next milestone, not this tag.
+   **deferred, not dropped**: the result is the next milestone, not this tag. (Same-family
+   judging is *allowed but instrument-only* — the ablation partly cancels its self-preference
+   bias, except where the architecture flatters the judge's style; see `judge/PROTOCOL.md` rule 2.)
 2. **The moral-courage dimension (C10) is not yet human-ratified.** Its anchors are drafted but
    await blind rating by someone other than the architect. Until then, C10 scores are provisional.
 3. **Ablation deltas are order-confounded.** Blocks read wildcards (`$.analysis.*`, …), so a

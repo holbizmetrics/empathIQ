@@ -16,8 +16,18 @@ Two scoring modes. Run either or both.
 
 1. **Blind to arm.** The judge is never told whether a response came from the `on` or `baseline`
    arm, nor which system produced it.
-2. **Different family where possible.** Prefer a judge model from a different family than the system
-   under test, to limit self-preference bias. If same-family, record it.
+2. **Different family where possible — same-family allowed but marked instrument-only.** Prefer a
+   judge from a different family than the system under test, to limit self-preference bias. Testing a
+   (say) Claude-based architecture does **not** force a Claude judge — the cleanest read is still a
+   cross-family judge; same-family judging is a **fallback for judge availability**, not a
+   consequence of the system's family. When you do judge same-family, it is permitted **only for
+   instrument-validation, never for the headline thesis**, and must be recorded as such. Two things
+   worth knowing: (a) the on−baseline **ablation partly cancels** same-family self-preference (both
+   arms share the bias), so a same-family *delta* is more trustworthy than a same-family *absolute*
+   score — **except** where the architecture shifts output *style* toward judge-preferred phrasing
+   (e.g. an empathy layer adding warmth/eloquence), which inflates the on-arm; (b) forbidden
+   regardless of marking: a judge scoring its **own model instance's** output (self-scoring is worse
+   than same-family).
 3. **Randomize order** in pairwise (counter position bias); ideally score each pair twice with order
    flipped and average.
 4. **C10 calibration, not preference.** For Moral Courage, give the judge the **human-rated anchor
