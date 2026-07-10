@@ -9,7 +9,9 @@ plus a declaration of (a) the base model and (b) the architecture applied. The b
 care *how* the architecture is built, only that the on/off ablation is reproducible.
 
 **Headline result = the ablation:** same base model, architecture on vs. off, same items, external
-judge. That delta is what defends "the architecture does work" against "it's just a longer prompt."
+judge. That delta is what defends "the architecture does work" against "it's just a longer prompt"
+— **when prompt-parity is held** (the baseline gets equal non-architecture prompting effort; see
+[`SUBMISSION.md`](SUBMISSION.md) and [`../judge/PROTOCOL.md`](../judge/PROTOCOL.md) rule 6).
 
 Reference architecture: **FVPA** (a values + scoped-permission + self-monitoring identity layer;
 the Constraint Principle predicts it raises security *and* relational quality together).

@@ -22,11 +22,19 @@ If it answers the items, it can be measured. **empathIQ is not restricted to LLM
 A submission is **two arms run on the same items**:
 
 - **on** — your full system (architecture engaged)
-- **baseline** — the same substrate with the architecture removed (the honest "off" arm)
+- **baseline** — the same substrate with the architecture removed, given **equal non-architecture
+  prompting effort** (prompt-parity — see below). The honest "off" arm is *not* a deliberately
+  thinned prompt.
 
 The headline result is the **on − baseline delta**. A single absolute score is accepted but
 ranked separately, because the delta is the claim that survives the "it's just a bigger prompt"
-objection: same substrate, one variable changed.
+objection: same substrate, one variable changed — **provided prompt-parity holds.**
+
+> **Prompt-parity (required for a fair delta).** The baseline must get the same
+> non-architecture prompting effort as the `on` arm — same instructions, examples, and framing
+> minus the architecture itself. A delta against a hobbled baseline measures engineering effort,
+> not the architecture. State per run how parity was held. (This is judge PROTOCOL.md rule 6 and
+> README limitation #6.)
 
 > If your system has no meaningful "off" state (e.g. a bare model, or a system you can't ablate),
 > submit it as a **baseline-only** entry. It still gets scored — it just doesn't make an
@@ -55,7 +63,7 @@ One responses file per arm, keyed to item ID:
   "arm": "on",                      // "on" | "baseline"
   "substrate": "claude-opus-4-6",
   "architecture_fixed": true,
-  "ablation_note": "on = substrate + <one-sentence description>; baseline = substrate alone",
+  "ablation_note": "on = substrate + <one-sentence description>; baseline = substrate with equal non-architecture prompting effort (prompt-parity held)",
   "responses": [
     { "item_id": "em-001", "response": "<full text, including the three beats where the item asks for them>" }
   ]
@@ -70,8 +78,9 @@ submitting system. Self-scored numbers, if any, are accepted only as clearly-lab
 
 ## Anti-gaming notes (open, pre-release)
 
-- **Contamination:** public items can leak into training data. The likely answer is a public
-  *sample* set (for understanding the format) plus a private *held-out* set used for the official
-  board. Not yet decided.
+- **Contamination:** public items can leak into training data. **Adopted design:** a public
+  *sample* set (for understanding the format — `em-001`, `em-002`, `re-001` in
+  [`../tasks/`](../tasks/)) plus a private *held-out* set of the same shape used for the official
+  board. Assume anything public is trained on; the board runs on held-out.
 - **Item provenance:** items adapted from existing benchmarks (e.g. EQ-Bench-style relational
   scenarios) must be credited as such; original empathIQ items are marked as original.
