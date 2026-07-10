@@ -1,6 +1,18 @@
 # empathIQ
 
-**An emotional-intelligence benchmark for AI *architectures*, not just bare models — and one that credits empathy-as-moral-courage, not only empathy-as-warmth.**
+**Build an empathic AI persona — then measure whether it's *actually* empathic.**
+
+empathIQ is two tools sharing one engine. Use either:
+
+- 🛠️ **Build & talk** — snap an empathic persona together from 16 blocks, optionally give it a
+  **voice**, and just talk to it (`run`, `chat`, `new`; add `--speak` to hear it aloud).
+  → [Quickstart](#quickstart) · [Build your own](#learn-build-or-measure)
+- 📊 **Measure** — score how empathic an architecture is *versus* a plain model (the benchmark:
+  `ab`, `run_battery`, the judge pass). → [Running the benchmark](#running-the-benchmark)
+
+New to the words — *benchmark, architecture, ablation, judge, noise band*? Each has a
+plain-English explainer at the bottom. **Jump down to learn ↓, back up to do ↑** — start with
+[Build or measure?](#learn-build-or-measure)
 
 > **Status: v0.1.0 — the instrument is released; the result is not.** A reproducible, self-skeptical EQ-architecture benchmark you can run today. The headline cross-family blind-judge run is the next milestone, deferred by design — see [Known limitations](#known-limitations-v01--the-instrument-not-the-result). MIT-licensed.
 
@@ -32,6 +44,15 @@ python benchmark/run_battery.py --mock
 #      python benchmark/score_variance.py --personality Sol   # REAL vs INDISTINGUISHABLE-FROM-NOISE
 ```
 
+> ❓ **New to the words here?** *the [ablation](#learn-whats-an-ablation)*, *the
+> [benchmark](#learn-whats-a-benchmark)*, *[A_full / B_no_EMPA / D_first_order_only](#learn-whats-an-ablation)*,
+> *the [noise band](#learn-whats-the-noise-band)* — one-paragraph explainers are below.
+
+> 🛠️ **Want to build, not measure?** `python empathiq.py new` scaffolds your own empathic persona
+> (guided), and `--speak` reads any persona's reply aloud (built-in Windows voice out of the box;
+> neural voices if you clone the `pc-native-voice-models` sibling). See
+> [Build or measure?](#learn-build-or-measure) and the full builder guide in [`forge/README.md`](forge/README.md).
+
 Drop `--mock` for real model output (still no API key needed — but the `claude` CLI must be
 **installed and signed in to your subscription**; "no key" ≠ "no sign-in"). The instant path is
 `--mock`; a *real* reply is ~4 min because each of the 16 blocks is its own model call. New here
@@ -50,6 +71,9 @@ python empathiq.py run --personality sol --input "I keep starting things and not
 # the real thing — real model output through your claude CLI, no API key (~4 min)
 python empathiq.py run --personality sol --input "I keep starting things and not finishing" --live
 
+# hear it — add --speak to read the reply aloud (built-in voice; no install on Windows)
+python empathiq.py run --personality sol --input "I keep starting things and not finishing" --speak
+
 # the actual experiment — same input through the full architecture vs. ablated versions (~10 min)
 python empathiq.py ab --personality sol --input "I keep starting things and not finishing" --variants A_full,B_no_EMPA,D_first_order_only --live
 ```
@@ -59,6 +83,14 @@ real run is slow because each block is its own model call (add `--api` for a fas
 run — that one needs a key). Swap the `--input "..."` for any situation, or use a designed
 prompt from [`benchmark/prompts.json`](benchmark/prompts.json). **Full command reference and how
 to build your own personality: [`forge/README.md`](forge/README.md).**
+
+> 🔎 **See more of what's happening** — the fastest way to *understand* the architecture. Add to any
+> `run` / `ab` (they also work on `run_battery` and the scorers):
+> - **`--live`** *(alias `--verbose` / `-v`)* — watch the 16 blocks light up one at a time.
+> - **`--full`** — print each block's **complete** output, not the 60-char preview — so you see the
+>   actual text *every* block produced on the way to the final reply, not just the last line. (Heads-up:
+>   `--verbose` is an alias for `--live`, the animation — it's **`--full`** that gives you the uncut text.)
+> - **`python empathiq.py blocks -v`** — what each block *reads, writes, and does*: the architecture, explained.
 
 ### What a run looks like
 
@@ -106,6 +138,10 @@ python benchmark/score_panel.py       # 3-judge panel + cross-judge disagreement
 
 Outputs land in `benchmark/results/`. Scoring only reads **real** outputs (`*-real.jsonl`); a
 `--mock` battery is placeholder text and is deliberately not scored.
+
+> ❓ **New to the words here?** *[judge / panel](#learn-who-grades-the-answers)*,
+> *[cross-family](#learn-who-grades-the-answers)*, *[self-score](#learn-who-grades-the-answers)*, and
+> *[how to read the scorecard it prints](#learn-how-to-read-a-scorecard)* — explainers below.
 
 **The headline needs an *external* judge** — a different model family, because a system never
 scores itself. Build a blind, randomized judge packet from your stored outputs:
@@ -268,3 +304,126 @@ Each artifact is ported deliberately. Nothing private is published by default.
 - [ ] **v6.0 (jailbreak-shaped) prompt** — include as a documented "what *not* to do" cautionary
       exhibit, or omit entirely?
 - [ ] **Transcripts** — which Eve exemplars (Mira Voss, Maya, …) go public, each opt-in.
+
+---
+
+# Learn — the words, in plain English
+
+*Short explainers for the terms the `do` sections link to. Read what you need, then jump back up.*
+
+## Learn: Build or measure?
+
+empathIQ does **two** things with one engine — you don't have to care about both:
+
+- 🛠️ **Build & talk.** Assemble an empathic AI *persona* (a wiring of 16 blocks) and just use it:
+  `run` sends it one message and prints the reply; `chat` is a back-and-forth; `new` scaffolds
+  your own persona step by step; add `--speak` to hear any reply read aloud. This is the "I want a
+  warmer talking assistant" path. Full builder guide: [`forge/README.md`](forge/README.md).
+- 📊 **Measure.** Score *how* empathic an architecture is, compared to a plain model — that's the
+  benchmark (`ab` for one item, `run_battery` for the whole set, then a [judge](#learn-who-grades-the-answers)
+  pass). This is the "I want a number I can defend" path.
+
+Same blocks underneath; you're either *running* them or *scoring* them. Want to build? Start with
+`run` / `new`. Want to measure? Start with [Running the benchmark](#running-the-benchmark).
+
+[↑ back to top](#empathiq)
+
+## Learn: What's a benchmark?
+
+A **benchmark** is a fixed set of tests plus a way to score them, so different systems can be
+compared *fairly* (same tests, same scoring). empathIQ is a benchmark for **empathy**: it feeds an
+AI designed emotional/moral situations and scores the replies against a rubric. It is **not itself
+a chatbot** — though it ships a demo persona (Sol) you *can* talk to. Think "a standardized test
+for how empathic an AI is," not "the AI being tested."
+
+[↑ back to top](#empathiq)
+
+## Learn: What's an "architecture" here?
+
+Not buildings. Here, **architecture** = the *system* wrapped around a base model: the model **plus**
+a persona/identity, a perspective-taking pass, boundaries, memory, a reflection loop. The same base
+model with vs. without that scaffolding can behave very differently — so empathIQ measures the
+**architecture** (the whole system's outputs), not just the bare model underneath. In empathIQ one
+architecture = 16 **blocks** wired into a graph (run `python empathiq.py blocks -v` to see them).
+
+[↑ back to top](#empathiq)
+
+## Learn: What's an ablation?
+
+**Ablation** = turn one piece **off** and re-run, to see what that piece was actually doing. It's
+empathIQ's headline test. You run three versions of the same persona on the same message and
+compare the replies:
+
+- **`A_full`** — the whole architecture (all 16 blocks).
+- **`B_no_EMPA`** — everything *except* the **Empathy** block (so: what did empathy add?).
+- **`D_first_order_only`** — just the 4 core blocks (INPUT → LIT → RESP → FINAL), no reflection or
+  enrichment (so: what did the *deeper* passes add?).
+
+The **difference** between the arms is the contribution of the removed piece. (`A/B/D` are just
+variant labels; `C` is reserved/older.)
+
+[↑ back to top](#empathiq)
+
+## Learn: Who grades the answers?
+
+A **judge** is a *second* AI (or a human) that scores the replies against the rubric — the system
+under test **never scores itself** (self-scoring is a known bias: models flatter their own style).
+Some terms:
+
+- **Panel** — several judges scored together, plus how much they *disagree* (low disagreement =
+  more trustworthy score).
+- **Cross-family** — the judge is a *different model family* than the system under test (e.g. a
+  non-Claude judge grading a Claude-based system). This removes the "grading my own team" bias, and
+  it's what the **headline** result requires.
+- **Self-score** — the system's own family grading itself. Useful for debugging the rig, **never**
+  the headline (see [Known limitations #1](#known-limitations-v01--the-instrument-not-the-result)).
+
+Full rules: [`judge/PROTOCOL.md`](judge/PROTOCOL.md).
+
+[↑ back to top](#empathiq)
+
+## Learn: What's the "noise band"?
+
+When you score a small set of replies, a difference like "+0.4" might be **real** or might just be
+**luck**. The **noise band** puts a confidence interval + effect size around the delta, so a result
+reads **REAL** vs **INDISTINGUISHABLE-FROM-NOISE** instead of a bare number. `score_variance.py`
+computes it. Rule of thumb: **if the delta sits inside the noise band, don't trust it yet** — it's
+not distinguishable from chance.
+
+[↑ back to top](#empathiq)
+
+## Learn: How to read a scorecard
+
+Score a battery and you get a table like this — cryptic at first, simple once decoded:
+
+```
+SCORECARD (A_full | first_order), single-judge — noisy by design:
+   #  category                 frame      reg        fmt        instr      restr
+  ------------------------------------------------------------------------------
+   1  humor_warm_performative  0.08/0.35  0.05/0.15  0.15/0.50  0.05/0.25  0.10/0.55
+```
+
+- **Each row = one test category** (the situation the persona was given).
+- **Each cell is `X/Y` = `A_full / D_first_order_only`** — the *full* architecture's score, then
+  the *stripped baseline's* score. Numbers are **0–1, higher is better.** So `0.08/0.35` means the
+  full architecture scored 0.08 and the baseline 0.35 *on that axis, for that item, from one judge.*
+- **The five axes** (the judge's own rubric — these are *competence* axes, not the C1–C10 empathy rubric):
+  - **frame** *(frame_fit)* — did it answer the situation actually presented, not get pulled into a wrong frame?
+  - **reg** *(register_match)* — did the tone match what the moment called for (playful vs. grave)?
+  - **fmt** *(format_adherence)* — did it follow the asked format (e.g. the think/feel split), or read clearly if none was asked?
+  - **instr** *(instruction_following)* — did it do what was actually asked, vs. a generic "empathy dump"?
+  - **restr** *(restraint_appropriateness)* — was comfort *calibrated*? (both over-comforting **and** cold withholding score low.)
+
+> ⚠️ **Read this before you conclude anything.** This scorecard is a **single-judge, noisy,
+> same-family self-score** — an *instrument check*, **not** the verdict. It is **normal and expected**
+> to see `A_full` score *below* the baseline on some rows — that's noise here, **not** evidence that
+> "empathy makes it worse." Two disciplines are built in: **variant-blind** (the judge never knows
+> which arm it's scoring) and **noise-honest** (one judge, labelled single, never treated as ground
+> truth). The real test is the deferred [cross-family judge](#learn-who-grades-the-answers); see
+> [Known limitations #1](#known-limitations-v01--the-instrument-not-the-result).
+
+**Want the *why* behind a number?** Add `--full`: `python benchmark/score_battery.py --personality Sol --full`
+prints each reply being judged **and the judge's complete verdict** for it — the reasoning behind
+every score, not just the number.
+
+[↑ back to top](#empathiq)
