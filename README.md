@@ -28,7 +28,7 @@ python benchmark/run_battery.py --mock
 # 4. scoring + the noise band — these read REAL stored outputs, so do a real run first,
 #    then score a chosen personality (the scorer deliberately ignores --mock text):
 #      python benchmark/run_battery.py --only self_worth_under_judgment --variants A_full,D_first_order_only
-#      python benchmark/score_battery.py  --personality Sol   # REAL vs baseline delta (name is capitalized: Sol, not sol)
+#      python benchmark/score_battery.py  --personality Sol   # REAL vs baseline delta (--personality is case-insensitive)
 #      python benchmark/score_variance.py --personality Sol   # REAL vs INDISTINGUISHABLE-FROM-NOISE
 ```
 
