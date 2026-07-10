@@ -426,4 +426,9 @@ SCORECARD (A_full | first_order), single-judge — noisy by design:
 prints each reply being judged **and the judge's complete verdict** for it — the reasoning behind
 every score, not just the number.
 
+**Prefer a picture?** `python benchmark/report_html.py` turns the latest scorecard into a
+self-contained **HTML report** — a per-axis A_full-vs-baseline headline, a category × axis heatmap,
+and the raw table, with the same noise caveat baked in at the top. Opens in any browser; `--open`
+launches it for you.
+
 [↑ back to top](#empathiq)
