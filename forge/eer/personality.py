@@ -44,6 +44,14 @@ class Personality:
         path = name_or_path
         if not os.path.exists(path):
             path = os.path.join(PERSONALITIES_DIR, f"{name_or_path}.json")
+            if not os.path.exists(path):
+                # Case-insensitive fallback so --personality Sol / sol / SOL all resolve
+                # to sol.json on EVERY OS (not just case-insensitive filesystems like NTFS).
+                wanted_filename = f"{name_or_path}.json".lower()
+                for entry in os.listdir(PERSONALITIES_DIR):
+                    if entry.lower() == wanted_filename:
+                        path = os.path.join(PERSONALITIES_DIR, entry)
+                        break
         with open(path, encoding="utf-8") as f:
             return cls.from_dict(json.load(f))
 

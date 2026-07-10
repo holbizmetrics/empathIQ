@@ -78,7 +78,9 @@ def gather_outputs(personality: str | None = None) -> dict:
             d = json.loads(line)
             if "final_expression" not in d:
                 continue
-            if personality and d.get("personality") != personality:
+            # Case-insensitive exact match: --personality sol and Sol both select the
+            # stored "Sol" records, but neither matches "Sol-FA" (exact, not prefix).
+            if personality and d.get("personality", "").lower() != personality.lower():
                 continue
             seen.add(d.get("personality", "?"))
             recs[(d["category_n"], d["variant"])] = d
